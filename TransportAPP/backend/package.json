@@ -1,0 +1,42 @@
+{
+  "name": "transport-admin-backend",
+  "version": "1.0.0",
+  "description": "Backend pour l'application de gestion de transport",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "init-db": "node scripts/initDb.js",
+    "init-circuits": "node scripts/initCircuits.js",
+    "init-employees": "node scripts/initEmployees.js",
+    "init-employees-real": "node scripts/initEmployeesReal.js",
+    "update-employees-table": "node scripts/updateEmployeesTable.js",
+    "init-chefs": "node scripts/initChefs.js",
+    "create-weekly-tables": "node scripts/createWeeklyPlanningTables.js",
+    "reset-plannings": "node scripts/resetPlannings.js",
+    "init-all": "npm run init-circuits && npm run init-employees",
+    "init-all-real": "npm run update-employees-table && npm run init-circuits && npm run init-employees-real",
+    "init-complete": "npm run create-weekly-tables && npm run init-all-real && npm run init-chefs"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "express-rate-limit": "^6.10.0",
+    "helmet": "^7.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.14.2",
+    "sqlite3": "^5.1.6"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": [
+    "transport",
+    "admin",
+    "api",
+    "sqlite"
+  ],
+  "author": "Votre Nom",
+  "license": "MIT"
+}
