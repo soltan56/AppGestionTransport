@@ -1,18 +1,16 @@
 const mysql = require('mysql2/promise');
 
-// Configuration MySQL
 const dbConfig = {
   host: 'localhost',
   user: 'root',
-  password: '', // Mets ton mot de passe si besoin
-  database: 'transport_db' // Mets le nom de ta base MySQL
+  password: '',
+  database: 'transport'
 };
 
 async function updateEmployeesTableMySQL() {
   const connection = await mysql.createConnection(dbConfig);
   console.log('🔧 Mise à jour de la table employees...');
 
-  // Ajouter la colonne point_ramassage si elle n'existe pas
   try {
     await connection.query("ALTER TABLE employees ADD COLUMN point_ramassage TEXT");
     console.log('✅ Colonne point_ramassage ajoutée.');
@@ -24,7 +22,6 @@ async function updateEmployeesTableMySQL() {
     }
   }
 
-  // Ajouter la colonne circuit si elle n'existe pas
   try {
     await connection.query("ALTER TABLE employees ADD COLUMN circuit TEXT");
     console.log('✅ Colonne circuit ajoutée.');
@@ -36,7 +33,6 @@ async function updateEmployeesTableMySQL() {
     }
   }
 
-  // Ajouter la colonne circuit_affecte si elle n'existe pas
   try {
     await connection.query("ALTER TABLE employees ADD COLUMN circuit_affecte TEXT");
     console.log('✅ Colonne circuit_affecte ajoutée.');
@@ -48,7 +44,6 @@ async function updateEmployeesTableMySQL() {
     }
   }
 
-  // Afficher la structure finale
   const [columns] = await connection.query("DESCRIBE employees");
   console.log('📊 Structure de la table employees:');
   columns.forEach(col => {

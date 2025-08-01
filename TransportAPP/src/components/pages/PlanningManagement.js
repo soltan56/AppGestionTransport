@@ -31,11 +31,11 @@ const PlanningManagement = () => {
 
   const stats = getStats();
 
-  // Filtrer les plannings
+  
   useEffect(() => {
     let filtered = plannings;
 
-    // Filtre par terme de recherche
+    
     if (searchTerm) {
       filtered = filtered.filter(planning =>
         planning.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -46,12 +46,12 @@ const PlanningManagement = () => {
       );
     }
 
-    // Filtre par status
+    
     if (filterStatus !== 'all') {
       filtered = filtered.filter(planning => planning.status === filterStatus);
     }
 
-    // Filtre par équipe
+    
     if (filterEquipe !== 'all') {
       filtered = filtered.filter(planning => planning.equipe === filterEquipe);
     }
@@ -59,7 +59,7 @@ const PlanningManagement = () => {
     setFilteredPlannings(filtered);
   }, [plannings, searchTerm, filterStatus, filterEquipe]);
 
-  // Récupérer les équipes uniques
+  
   const uniqueEquipes = [...new Set(plannings.map(p => p.equipe))];
 
   const handleExportSimple = () => {
@@ -99,7 +99,7 @@ const PlanningManagement = () => {
 
   const handleDelete = (planningId) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer ce planning ?')) {
-      // Implémentation de la suppression
+      
       console.log('Suppression du planning:', planningId);
     }
   };
@@ -119,7 +119,7 @@ const PlanningManagement = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Gestion des Plannings</h1>
@@ -130,7 +130,7 @@ const PlanningManagement = () => {
         </div>
         
         <div className="flex items-center space-x-3">
-          {/* Boutons d'export */}
+          
           <div className="flex items-center space-x-2">
             <button
               onClick={handleExportSimple}
@@ -166,7 +166,7 @@ const PlanningManagement = () => {
         </div>
       </div>
 
-      {/* Statistiques rapides */}
+      
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="card">
           <div className="flex items-center justify-between">
@@ -219,10 +219,10 @@ const PlanningManagement = () => {
         </div>
       </div>
 
-      {/* Filtres et recherche */}
+      
       <div className="card">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0 md:space-x-4">
-          {/* Barre de recherche */}
+          
           <div className="relative flex-1 max-w-md">
             <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <input
@@ -234,7 +234,7 @@ const PlanningManagement = () => {
             />
           </div>
           
-          {/* Filtres */}
+          
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
               <FiFilter className="h-4 w-4 text-gray-500" />
@@ -264,7 +264,7 @@ const PlanningManagement = () => {
         </div>
       </div>
 
-      {/* Liste des plannings */}
+      
       <div className="card">
         {filteredPlannings.length > 0 ? (
           <div className="overflow-x-auto">
@@ -374,7 +374,7 @@ const PlanningManagement = () => {
         )}
       </div>
 
-      {/* Modal de formulaire */}
+      
       {showForm && (
         <PlanningForm
           planning={selectedPlanning}

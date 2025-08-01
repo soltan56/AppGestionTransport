@@ -73,7 +73,7 @@ Interface d'administration moderne pour la gestion de transport avec authentific
 2. **Démarrer le frontend** (dans un autre terminal)
    ```bash
    npm install && npm start
-   ```
+   ``
 
 3. **Accéder à l'application** : `http://localhost:3000`
 

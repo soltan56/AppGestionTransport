@@ -3,8 +3,8 @@ const mysql = require('mysql2/promise');
 const dbConfig = {
   host: 'localhost',
   user: 'root',
-  password: '', // Mets ton mot de passe si besoin
-  database: 'transport_db' // Mets le nom de ta base MySQL
+  password: '', 
+  database: 'transport_db' 
 };
 
 async function createWeeklyPlanningTables() {
@@ -13,7 +13,6 @@ async function createWeeklyPlanningTables() {
   try {
     console.log('🚀 Création des tables pour les plannings hebdomadaires...');
     
-    // Table pour les plannings hebdomadaires
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS weekly_plannings (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -30,7 +29,6 @@ async function createWeeklyPlanningTables() {
     `);
     console.log('✅ Table weekly_plannings créée');
     
-    // Table pour les assignations d'employés aux équipes
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS weekly_assignments (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -45,7 +43,6 @@ async function createWeeklyPlanningTables() {
     `);
     console.log('✅ Table weekly_assignments créée');
     
-    // Index pour améliorer les performances
     await connection.execute(`
       CREATE INDEX IF NOT EXISTS idx_weekly_assignments_team 
       ON weekly_assignments(team)
@@ -66,7 +63,6 @@ async function createWeeklyPlanningTables() {
   }
 }
 
-// Exécuter si le script est appelé directement
 if (require.main === module) {
   createWeeklyPlanningTables();
 }

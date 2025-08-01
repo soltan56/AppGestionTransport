@@ -14,7 +14,6 @@ async function fixTeamNames() {
     connection = await mysql.createConnection(dbConfig);
     console.log('🔗 Connexion à la base de données établie\n');
 
-    // Vérifier la structure de la table
     console.log('📋 STRUCTURE DE LA TABLE weekly_assignments :');
     const [structure] = await connection.execute('DESCRIBE weekly_assignments');
     structure.forEach(col => {
@@ -31,11 +30,9 @@ async function fixTeamNames() {
     const [nullTeams] = await connection.execute('SELECT COUNT(*) as count FROM weekly_assignments WHERE team_name IS NULL OR team_name = ""');
     console.log(`  Assignations avec team_name NULL/vide: ${nullTeams[0].count}`);
 
-    // Si des team_name sont NULL, proposer de les corriger
     if (nullTeams[0].count > 0) {
       console.log('\n🔧 CORRECTION DES NOMS D\'ÉQUIPE NULL...');
       
-      // Assigner des équipes par défaut basées sur l'ID
       const updates = [
         { start: 1, end: 3, team: 'Matin' },
         { start: 4, end: 6, team: 'Soir' },

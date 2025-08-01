@@ -28,11 +28,8 @@ const PlanningConsultation = () => {
 
   const stats = getStats();
 
-  // Filtrer les plannings
   useEffect(() => {
     let filtered = plannings;
-
-    // Filtre par terme de recherche
     if (searchTerm) {
       filtered = filtered.filter(planning =>
         planning.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -43,12 +40,9 @@ const PlanningConsultation = () => {
       );
     }
 
-    // Filtre par status
     if (filterStatus !== 'all') {
       filtered = filtered.filter(planning => planning.status === filterStatus);
     }
-
-    // Filtre par équipe
     if (filterEquipe !== 'all') {
       filtered = filtered.filter(planning => planning.equipe === filterEquipe);
     }
@@ -56,7 +50,6 @@ const PlanningConsultation = () => {
     setFilteredPlannings(filtered);
   }, [plannings, searchTerm, filterStatus, filterEquipe]);
 
-  // Récupérer les équipes uniques
   const uniqueEquipes = [...new Set(plannings.map(p => p.equipe))];
 
   const handleExportSimple = () => {
@@ -104,7 +97,6 @@ const PlanningConsultation = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header avec notification lecture seule */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Consultation des Plannings</h1>
@@ -116,7 +108,6 @@ const PlanningConsultation = () => {
         </div>
         
         <div className="flex items-center space-x-3">
-          {/* Boutons d'export uniquement */}
           <div className="flex items-center space-x-2">
             <button
               onClick={handleExportSimple}
@@ -141,7 +132,6 @@ const PlanningConsultation = () => {
         </div>
       </div>
 
-      {/* Statistiques rapides */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="card">
           <div className="flex items-center justify-between">
@@ -194,10 +184,8 @@ const PlanningConsultation = () => {
         </div>
       </div>
 
-      {/* Filtres et recherche */}
       <div className="card">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0 md:space-x-4">
-          {/* Barre de recherche */}
           <div className="relative flex-1 max-w-md">
             <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <input
@@ -209,7 +197,6 @@ const PlanningConsultation = () => {
             />
           </div>
           
-          {/* Filtres */}
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
               <FiFilter className="h-4 w-4 text-gray-500" />
@@ -239,7 +226,6 @@ const PlanningConsultation = () => {
         </div>
       </div>
 
-      {/* Liste des plannings */}
       <div className="card">
         {filteredPlannings.length > 0 ? (
           <div className="overflow-x-auto">
@@ -329,8 +315,7 @@ const PlanningConsultation = () => {
         )}
       </div>
 
-      {/* Modal de détails */}
-      {selectedPlanning && (
+       {selectedPlanning && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}

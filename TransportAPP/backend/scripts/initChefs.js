@@ -3,19 +3,18 @@ const mysql = require('mysql2/promise');
 const dbConfig = {
   host: 'localhost',
   user: 'root',
-  password: '', // Mets ton mot de passe si besoin
-  database: 'transport_db' // Mets le nom de ta base MySQL
+  password: '', 
+  database: 'transport' 
 };
 
-// Données des chefs d'atelier fictifs
 const chefs = [
   {
-    name: 'Marc Dupont',
-    email: 'marc.dupont@transport.ma',
+    name: 'Ouadif Kacem',
+    email: 'chef@transport.ma',
     password: 'chef123',
     role: 'chef',
     atelier_id: 1,
-    atelier_name: 'Atelier Nord'
+    atelier_name: 'ACC'
   },
   {
     name: 'Sophie Bernard',
@@ -27,15 +26,13 @@ const chefs = [
   }
 ];
 
-// Fonction pour initialiser les chefs d'atelier
-async function initChefs() {
+  async function initChefs() {
   const connection = await mysql.createConnection(dbConfig);
   
   try {
     console.log('🚀 Initialisation des chefs d\'atelier...');
     
-    // Vérifier si la table users existe, sinon la créer
-    await connection.execute(`
+     await connection.execute(`
       CREATE TABLE IF NOT EXISTS users (
         id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
@@ -47,7 +44,6 @@ async function initChefs() {
       )
     `);
     
-    // Vérifier si la table ateliers existe, sinon la créer
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS ateliers (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -59,7 +55,6 @@ async function initChefs() {
       )
     `);
     
-    // Ajouter les ateliers si ils n'existent pas
     for (const chef of chefs) {
       const [atelierExists] = await connection.query(
         'SELECT id FROM ateliers WHERE id = ?',
@@ -75,9 +70,7 @@ async function initChefs() {
       }
     }
     
-    // Ajouter les chefs d'atelier
     for (const chef of chefs) {
-      // Vérifier si le chef existe déjà
       const [existingUser] = await connection.query(
         'SELECT id FROM users WHERE email = ?',
         [chef.email]
@@ -94,7 +87,6 @@ async function initChefs() {
       }
     }
     
-    // Ajouter une colonne atelier_chef_id à la table employees si elle n'existe pas
     try {
       await connection.execute(`
         ALTER TABLE employees ADD COLUMN atelier_chef_id INT DEFAULT NULL
@@ -106,14 +98,11 @@ async function initChefs() {
       }
     }
     
-    // Assigner quelques employés aux chefs d'atelier
     console.log('🔄 Assignation des employés aux chefs...');
     
-    // Récupérer tous les employés
     const [employees] = await connection.query('SELECT id, nom, prenom FROM employees LIMIT 20');
     
     if (employees.length > 0) {
-      // Assigner la première moitié au chef 1
       const halfPoint = Math.ceil(employees.length / 2);
       
       for (let i = 0; i < halfPoint; i++) {
@@ -123,7 +112,6 @@ async function initChefs() {
         );
       }
       
-      // Assigner la seconde moitié au chef 2
       for (let i = halfPoint; i < employees.length; i++) {
         await connection.execute(
           'UPDATE employees SET atelier_chef_id = ? WHERE id = ?',
@@ -135,7 +123,6 @@ async function initChefs() {
       console.log(`✅ ${employees.length - halfPoint} employés assignés au chef 2 (Sophie Bernard)`);
     }
     
-    // Ajouter un administrateur pour test complet
     const [adminExists] = await connection.query(
       'SELECT id FROM users WHERE email = ?',
       ['admin@transport.ma']
@@ -163,7 +150,6 @@ async function initChefs() {
   }
 }
 
-// Exécuter si le script est appelé directement
 if (require.main === module) {
   initChefs();
 }

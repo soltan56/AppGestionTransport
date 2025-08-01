@@ -37,28 +37,25 @@ async function checkChefEmployeeMapping() {
   try {
     console.log('🔍 Vérification de la correspondance Chefs <-> Employés\n');
     
-    // Récupérer les employés
     const employees = await testAPI('/employees');
     console.log(`📊 Total employés: ${employees.length}`);
     
-    // Analyser les assignations
+
     const employeesWithChef = employees.filter(emp => emp.atelier_chef_id !== null && emp.atelier_chef_id !== undefined);
     const employeesWithoutChef = employees.filter(emp => emp.atelier_chef_id === null || emp.atelier_chef_id === undefined);
     
     console.log(`👥 Employés avec chef assigné: ${employeesWithChef.length}`);
     console.log(`👤 Employés sans chef assigné: ${employeesWithoutChef.length}\n`);
     
-    // Analyser les IDs de chef uniques
     const uniqueChefIds = [...new Set(employeesWithChef.map(emp => emp.atelier_chef_id))];
     console.log(`🔑 IDs de chef uniques trouvés: ${uniqueChefIds.join(', ')}\n`);
     
-    // Grouper par chef
+   
     console.log('📋 Répartition des employés par chef:');
     uniqueChefIds.forEach(chefId => {
       const employeesForChef = employeesWithChef.filter(emp => emp.atelier_chef_id === chefId);
       console.log(`  Chef ID ${chefId}: ${employeesForChef.length} employés`);
       
-      // Afficher quelques exemples
       employeesForChef.slice(0, 3).forEach(emp => {
         console.log(`    - ${emp.nom} ${emp.prenom} (ID: ${emp.id})`);
       });
@@ -69,7 +66,6 @@ async function checkChefEmployeeMapping() {
     
     console.log('\n🧪 Test de connexion avec chefs:');
     
-    // Tester les connexions avec les chefs
     const testLogins = [
       { email: 'marc.dupont@transport.ma', password: 'password123', role: 'chef' },
       { email: 'sophie.bernard@transport.ma', password: 'password123', role: 'chef' },
@@ -111,7 +107,6 @@ async function checkChefEmployeeMapping() {
           const user = loginResult.user;
           console.log(`✅ ${login.email} -> ID: ${user.id}, Nom: ${user.name}, Rôle: ${user.role}`);
           
-          // Vérifier combien d'employés sont assignés à ce chef
           const assignedEmployees = employees.filter(emp => emp.atelier_chef_id === user.id);
           console.log(`   🔗 Employés assignés: ${assignedEmployees.length}`);
           

@@ -10,7 +10,6 @@ const Header = () => {
   const [showProfile, setShowProfile] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
-  // Données fictives pour les notifications
   const notifications = [
     {
       id: 1,
@@ -97,7 +96,6 @@ const Header = () => {
   };
 
   const handleSettingsSave = () => {
-    // Logique pour sauvegarder les paramètres (à implémenter avec le backend)
     console.log('Paramètres sauvegardés:', settingsData);
     setShowSettings(false);
   };
@@ -107,16 +105,13 @@ const Header = () => {
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            {/* Logo et titre */}
             <div className="flex items-center">
               <h1 className="text-xl font-semibold text-gray-900">
                 Tableau de Bord - {getRoleLabel()}
               </h1>
             </div>
 
-            {/* Actions et profil utilisateur */}
             <div className="flex items-center space-x-4">
-              {/* Notifications */}
               <div className="relative">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
@@ -130,7 +125,6 @@ const Header = () => {
                   </span>
                 </motion.button>
 
-                {/* Dropdown notifications */}
                 <AnimatePresence>
                   {showNotifications && (
                     <motion.div
@@ -168,7 +162,6 @@ const Header = () => {
                 </AnimatePresence>
               </div>
 
-              {/* Menu utilisateur */}
               <div className="relative">
                 <motion.button
                   whileHover={{ scale: 1.02 }}
@@ -186,7 +179,6 @@ const Header = () => {
                   <FiChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${showUserMenu ? 'transform rotate-180' : ''}`} />
                 </motion.button>
 
-                {/* Menu déroulant */}
                 <AnimatePresence>
                   {showUserMenu && (
                     <motion.div
@@ -240,7 +232,6 @@ const Header = () => {
           </div>
         </div>
 
-        {/* Overlay pour fermer les menus */}
         {(showUserMenu || showNotifications) && (
           <div
             className="fixed inset-0 z-40"
@@ -252,7 +243,6 @@ const Header = () => {
         )}
       </header>
 
-      {/* Modal Profil */}
       <AnimatePresence>
         {showProfile && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -335,7 +325,6 @@ const Header = () => {
         )}
       </AnimatePresence>
 
-      {/* Modal Paramètres */}
       <AnimatePresence>
         {showSettings && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">

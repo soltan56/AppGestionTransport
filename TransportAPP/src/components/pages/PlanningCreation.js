@@ -26,7 +26,6 @@ const PlanningCreation = () => {
   const { employees, circuits, ateliers } = useData();
   const navigate = useNavigate();
   
-  // Debug initial (supprimé pour plus de clarté)
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedWeek, setSelectedWeek] = useState(null);
@@ -36,7 +35,6 @@ const PlanningCreation = () => {
   const [loading, setLoading] = useState(false);
   const [saveProgress, setSaveProgress] = useState({ current: 0, total: 0, isVisible: false });
 
-  // Fonction pour charger les plannings existants
   const loadExistingPlannings = async (year = selectedYear) => {
     try {
       setLoading(true);
@@ -53,7 +51,6 @@ const PlanningCreation = () => {
           const weekKey = `${planning.year}-W${planning.week_number}`;
           
           try {
-            // Charger les détails avec assignations
             const detailResponse = await fetch(
               `http://localhost:3001/api/weekly-plannings/${planning.year}/${planning.week_number}`,
               { credentials: 'include' }
@@ -69,9 +66,9 @@ const PlanningCreation = () => {
             console.error(`Erreur chargement semaine ${planning.week_number}:`, error);
           }
 
-          // Délai entre chaque requête pour éviter le spam
+         
           if (i < existingPlannings.length - 1) {
-            await delay(200); // 200ms entre chaque requête
+            await delay(200); 
           }
         }
         
@@ -84,12 +81,9 @@ const PlanningCreation = () => {
     }
   };
 
-  // Charger les plannings existants pour l'année sélectionnée
   useEffect(() => {
     loadExistingPlannings();
   }, [selectedYear]);
-
-  // Recharger les données quand l'utilisateur revient sur la page
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden) {
@@ -99,7 +93,6 @@ const PlanningCreation = () => {
     };
 
     const handleFocus = () => {
-      // Recharger aussi quand la fenêtre regagne le focus
       loadExistingPlannings();
     };
 
@@ -112,7 +105,6 @@ const PlanningCreation = () => {
     };
   }, [selectedYear]);
 
-  // Générer les 53 semaines de l'année
   const generateWeeks = (year) => {
     const weeks = [];
     for (let week = 1; week <= 53; week++) {
@@ -131,7 +123,6 @@ const PlanningCreation = () => {
     return weeks;
   };
 
-  // Obtenir la date du lundi d'une semaine donnée
   const getDateOfWeek = (week, year) => {
     const date = new Date(year, 0, 1 + (week - 1) * 7);
     const day = date.getDay();
@@ -139,7 +130,6 @@ const PlanningCreation = () => {
     return new Date(date.setDate(diff));
   };
 
-  // Vérifier si c'est la semaine actuelle
   const isCurrentWeek = (week, year) => {
     const now = new Date();
     const currentYear = now.getFullYear();
@@ -147,7 +137,6 @@ const PlanningCreation = () => {
     return year === currentYear && week === currentWeek;
   };
 
-  // Vérifier si une semaine est dans le passé
   const isPastWeek = (week, year) => {
     const now = new Date();
     const currentYear = now.getFullYear();
@@ -158,12 +147,9 @@ const PlanningCreation = () => {
     return false;
   };
 
-  // Vérifier si une semaine est modifiable
   const isWeekEditable = (week, year) => {
     return !isPastWeek(week, year);
   };
-
-  // Obtenir le numéro de semaine d'une date
   const getWeekNumber = (date) => {
     const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
     const dayNum = d.getUTCDay() || 7;
@@ -174,13 +160,12 @@ const PlanningCreation = () => {
 
   const weeks = generateWeeks(selectedYear);
 
-  // Ouvrir le modal pour une semaine (création ou modification)
   const handleWeekClick = (week) => {
     const weekKey = `${selectedYear}-W${week.number}`;
     const hasExistingPlanning = weeklyPlannings[weekKey] && Object.keys(weeklyPlannings[weekKey]).length > 0;
     
-    // Permettre l'ouverture si :
-    // 1. La semaine est modifiable (future/actuelle)
+    
+    
     // 2. OU il existe déjà un planning (modification)
     if (!isWeekEditable(week.number, selectedYear) && !hasExistingPlanning) {
       return; // Ne pas ouvrir pour les semaines passées sans planning
@@ -190,12 +175,10 @@ const PlanningCreation = () => {
     setShowModal(true);
   };
 
-  // Obtenir les employés selon le rôle
   const getAvailableEmployees = () => {
     if (user?.role === 'administrateur') {
-      return employees; // Admin voit tous les employés
+      return employees; 
     } else if (user?.role === 'chef') {
-      // Chef voit ses employés assignés + les employés non assignés
       return employees.filter(emp => 
         emp.atelier_chef_id === user.id || emp.atelier_chef_id === null
       );
@@ -203,13 +186,10 @@ const PlanningCreation = () => {
     return [];
   };
 
-  // Vérifier si une semaine a des assignations
   const hasAssignments = (weekNumber) => {
     const weekKey = `${selectedYear}-W${weekNumber}`;
     return weeklyPlannings[weekKey] && Object.keys(weeklyPlannings[weekKey]).length > 0;
   };
-
-  // Obtenir le nombre total d'employés assignés pour une semaine
   const getWeekAssignmentsCount = (weekNumber) => {
     const weekKey = `${selectedYear}-W${weekNumber}`;
     const weekPlanning = weeklyPlannings[weekKey];
@@ -220,11 +200,10 @@ const PlanningCreation = () => {
     }, 0);
   };
 
-  // Mettre à jour les assignations d'une semaine (local seulement)
   const handleWeekPlanningUpdate = (weekNumber, assignments) => {
     const weekKey = `${selectedYear}-W${weekNumber}`;
     
-    // Mettre à jour l'état local uniquement
+    
     setWeeklyPlannings(prev => ({
       ...prev,
       [weekKey]: assignments
@@ -233,12 +212,11 @@ const PlanningCreation = () => {
     console.log(`📝 Planning semaine ${weekNumber} modifié localement (utiliser "Sauvegarder Tout" pour persister)`);
   };
 
-  // Supprimer un planning localement et en base si il existe
   const handleDeletePlanning = async (weekNumber) => {
     const weekKey = `${selectedYear}-W${weekNumber}`;
     
     try {
-      // Essayer de supprimer en base de données d'abord
+      
       const response = await fetch(`http://localhost:3001/api/weekly-plannings/${selectedYear}/${weekNumber}`, {
         method: 'DELETE',
         credentials: 'include'
@@ -255,7 +233,7 @@ const PlanningCreation = () => {
       console.warn(`⚠️ Erreur API suppression:`, error);
     }
     
-    // Supprimer localement dans tous les cas
+    
     setWeeklyPlannings(prev => {
       const updated = { ...prev };
       delete updated[weekKey];
@@ -265,7 +243,6 @@ const PlanningCreation = () => {
     console.log(`🗑️ Planning semaine ${weekNumber} supprimé localement`);
   };
 
-  // Effacer tous les plannings locaux
   const handleClearAllPlannings = () => {
     if (window.confirm('⚠️ Êtes-vous sûr de vouloir effacer tous les plannings locaux ?\n\nCette action supprimera toutes les modifications non sauvegardées.')) {
       setWeeklyPlannings({});
@@ -273,10 +250,8 @@ const PlanningCreation = () => {
     }
   };
 
-  // Fonction utilitaire pour attendre
   const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-  // Fonction utilitaire pour retry en cas d'erreur 429
   const saveWithRetry = async (url, data, maxRetries = 3) => {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -307,7 +282,6 @@ const PlanningCreation = () => {
     }
   };
 
-  // Sauvegarder tous les plannings avec délais
   const handleSaveAll = async () => {
     try {
       setLoading(true);
@@ -317,7 +291,6 @@ const PlanningCreation = () => {
       const planningsToSave = Object.entries(weeklyPlannings)
         .filter(([, assignments]) => Object.keys(assignments).length > 0);
 
-      // Initialiser le progrès
       setSaveProgress({ current: 0, total: planningsToSave.length, isVisible: true });
       console.log(`🚀 Sauvegarde de ${planningsToSave.length} planning(s)...`);
 
@@ -344,18 +317,15 @@ const PlanningCreation = () => {
             console.error(`❌ Erreur semaine ${week_number}:`, errorText);
           }
 
-          // Mettre à jour le progrès
           setSaveProgress(prev => ({ ...prev, current: i + 1 }));
         } catch (error) {
           errors++;
           console.error(`❌ Erreur semaine ${week_number}:`, error);
-          // Mettre à jour le progrès même en cas d'erreur
           setSaveProgress(prev => ({ ...prev, current: i + 1 }));
         }
 
-        // Délai entre chaque requête pour éviter le spam
         if (i < planningsToSave.length - 1) {
-          await delay(1000); // 1s entre chaque requête
+          await delay(1000); 
         }
       }
 
@@ -369,7 +339,6 @@ const PlanningCreation = () => {
       alert('❌ Erreur lors de la sauvegarde');
     } finally {
       setLoading(false);
-      // Masquer la notification de progression après un délai
       setTimeout(() => {
         setSaveProgress({ current: 0, total: 0, isVisible: false });
       }, 2000);
@@ -378,7 +347,7 @@ const PlanningCreation = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
-      {/* Header */}
+      
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -400,7 +369,7 @@ const PlanningCreation = () => {
           </div>
 
           <div className="flex items-center space-x-4">
-            {/* Sélecteur d'année (limitée aux années actuelles et futures) */}
+            
             <div className="flex items-center space-x-2">
               <motion.button
                 whileHover={{ scale: 1.05 }}
@@ -432,7 +401,7 @@ const PlanningCreation = () => {
 
 
 
-            {/* Bouton de sauvegarde */}
+            
             <motion.button
               whileHover={!loading ? { scale: 1.05 } : {}}
               whileTap={!loading ? { scale: 0.95 } : {}}
@@ -457,7 +426,7 @@ const PlanningCreation = () => {
         </div>
       </motion.div>
 
-      {/* Statistiques rapides */}
+      
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -509,7 +478,7 @@ const PlanningCreation = () => {
         </div>
       </motion.div>
 
-      {/* Agenda des semaines */}
+      
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -607,7 +576,7 @@ const PlanningCreation = () => {
                     )}
                   </div>
 
-                  {/* Indicateur semaine actuelle */}
+                  
                   {week.isCurrentWeek && !isPast && (
                     <div className="absolute -top-1 -right-1">
                       <div className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full shadow-lg">
@@ -616,7 +585,7 @@ const PlanningCreation = () => {
                     </div>
                   )}
 
-                  {/* Indicateur semaine passée */}
+                  
                   {isPast && (
                     <div className="absolute -top-1 -right-1">
                       <div className="bg-gray-400 text-white text-xs px-2 py-1 rounded-full shadow-lg">
@@ -625,12 +594,12 @@ const PlanningCreation = () => {
                     </div>
                   )}
 
-                  {/* Animation hover pour les semaines modifiables */}
+                  
                   {isEditable && (
                     <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-600 opacity-0 group-hover:opacity-5 rounded-xl transition-opacity duration-300" />
                   )}
 
-                  {/* Overlay pour les semaines passées */}
+                  
                   {isPast && (
                     <div className="absolute inset-0 bg-gray-600 opacity-5 rounded-xl"></div>
                   )}
@@ -641,7 +610,7 @@ const PlanningCreation = () => {
         </div>
       </motion.div>
 
-      {/* Légende */}
+      
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -677,7 +646,7 @@ const PlanningCreation = () => {
         </div>
       </motion.div>
 
-      {/* Section Plannings Actifs */}
+      
       {Object.keys(weeklyPlannings).length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -858,7 +827,7 @@ const PlanningCreation = () => {
         </motion.div>
       )}
 
-      {/* Modal de gestion hebdomadaire */}
+      
       <WeekPlanningModal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
@@ -875,7 +844,7 @@ const PlanningCreation = () => {
         initialAssignments={selectedWeek ? weeklyPlannings[`${selectedYear}-W${selectedWeek.number}`] || {} : {}}
       />
 
-      {/* Notification de progression de sauvegarde */}
+      
       {saveProgress.isVisible && (
         <motion.div
           initial={{ opacity: 0, y: 50 }}
@@ -895,7 +864,7 @@ const PlanningCreation = () => {
             </div>
           </div>
           
-          {/* Barre de progression */}
+          
           <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
             <div 
               className="bg-blue-500 h-2 rounded-full transition-all duration-300"

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-// GET /api/ateliers
+
 router.get('/', async (req, res) => {
   try {
     const [rows] = await req.pool.query('SELECT * FROM ateliers ORDER BY nom');
@@ -12,7 +12,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// POST /api/ateliers
+
 router.post('/', async (req, res) => {
   const { nom, description, localisation, responsable } = req.body;
   if (!nom) {

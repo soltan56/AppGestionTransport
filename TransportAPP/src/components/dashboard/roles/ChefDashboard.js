@@ -28,7 +28,6 @@ import { useData } from '../../../contexts/DataContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import PlanningCreation from '../../pages/PlanningCreation';
 
-// Composants de page pour Chef d'Atelier
 const ChefHome = () => {
   const { plannings, employees, buses, circuits, getStats } = useData();
   const { user } = useAuth();
@@ -36,7 +35,6 @@ const ChefHome = () => {
   const [recentWeeklyPlannings, setRecentWeeklyPlannings] = useState([]);
   const [activeWeeklyPlannings, setActiveWeeklyPlannings] = useState([]);
   
-  // Charger les plannings récents et actifs
   useEffect(() => {
     const fetchPlannings = async () => {
       try {
@@ -51,7 +49,6 @@ const ChefHome = () => {
         if (response.ok) {
           const weeklyPlannings = await response.json();
           
-          // Enrichir avec les détails des employés pour chaque planning
           const enrichedPlannings = await Promise.all(
             weeklyPlannings.map(async (planning) => {
               try {
@@ -86,10 +83,8 @@ const ChefHome = () => {
           
           const validPlannings = enrichedPlannings.filter(p => p !== null);
           
-          // Séparer récents et actifs
           setRecentWeeklyPlannings(validPlannings.slice(0, 4));
           
-          // Plannings actifs = semaine actuelle et futures
           const activePlannings = validPlannings.filter(planning => 
             planning.week_number >= currentWeek
           );
@@ -100,7 +95,6 @@ const ChefHome = () => {
       }
     };
 
-    // Fonction utilitaire pour obtenir le numéro de semaine
     const getWeekNumber = (date) => {
       const start = new Date(date.getFullYear(), 0, 1);
       const diff = date - start;
@@ -119,7 +113,6 @@ const ChefHome = () => {
     { label: 'Plannings Actifs', value: activeWeeklyPlannings.length.toString(), icon: FiCalendar, color: 'text-purple-600', bg: 'bg-purple-100' }
   ];
 
-  // Formater les plannings récents pour l'affichage
   const formatRecentPlannings = () => {
     return recentWeeklyPlannings.map(planning => ({
       action: `Planning Semaine ${planning.week_number}`,
@@ -132,7 +125,6 @@ const ChefHome = () => {
 
   return (
     <div className="space-y-8">
-      {/* En-tête */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Tableau de Bord Chef d'Atelier</h1>
@@ -141,7 +133,6 @@ const ChefHome = () => {
 
       </div>
 
-      {/* Statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {displayStats.map((stat, index) => (
           <motion.div
@@ -164,7 +155,6 @@ const ChefHome = () => {
         ))}
       </div>
 
-      {/* Actions rapides */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <motion.div
           whileHover={{ scale: 1.02 }}
@@ -223,7 +213,6 @@ const ChefHome = () => {
         </motion.div>
       </div>
 
-      {/* Activités récentes */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="card">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Plannings Récents</h3>
@@ -354,35 +343,30 @@ const CircuitsPage = () => {
 const StatsPage = () => {
   const { employees, circuits, plannings } = useData();
 
-  // Calculs des statistiques réelles
   const realStats = {
-    // Statistiques des employés par équipe
     equipeStats: {
       matin: employees.filter(e => e.equipe === 'MATIN').length,
       soir: employees.filter(e => e.equipe === 'SOIR').length,
       na: employees.filter(e => e.equipe === 'N/A').length,
     },
     
-    // Statistiques des circuits
     circuitStats: circuits.length > 0 ? {
       total: circuits.length,
       utilises: [...new Set(employees.map(e => e.circuit).filter(c => c))].length,
       tauxUtilisation: Math.round((([...new Set(employees.map(e => e.circuit).filter(c => c))].length) / circuits.length) * 100)
     } : { total: 9, utilises: 8, tauxUtilisation: 89 },
     
-    // Statistiques des ateliers
     atelierStats: [...new Set(employees.map(e => e.atelier).filter(a => a))].reduce((acc, atelier) => {
       acc[atelier] = employees.filter(e => e.atelier === atelier).length;
       return acc;
     }, {}),
     
-    // Points de ramassage les plus utilisés
+
     pointsRamassageStats: [...new Set(employees.map(e => e.point_ramassage).filter(p => p))].map(point => ({
       point,
       count: employees.filter(e => e.point_ramassage === point).length
     })).sort((a, b) => b.count - a.count).slice(0, 5),
     
-    // Répartition par circuit
     circuitUtilisation: [...new Set(employees.map(e => e.circuit).filter(c => c))].map(circuit => ({
       circuit,
       count: employees.filter(e => e.circuit === circuit).length
@@ -408,7 +392,6 @@ const StatsPage = () => {
         </div>
       </div>
 
-      {/* Statistiques principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="card">
           <div className="flex items-center justify-between">
@@ -459,13 +442,12 @@ const StatsPage = () => {
         </div>
       </div>
 
-      {/* Graphiques détaillés */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <StatsContainer title="Effectifs par Équipe">
           <EmployeesByTeamChart data={[
             realStats.equipeStats.matin,
             realStats.equipeStats.soir,
-            0, // Équipe Nuit (non utilisée)
+            0,
             realStats.equipeStats.na
           ]} />
         </StatsContainer>
@@ -542,7 +524,6 @@ const StatsPage = () => {
         </div>
       </div>
 
-      {/* Métriques clés calculées */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="card text-center">
           <div className="text-3xl font-bold text-blue-600 mb-2">{realStats.circuitStats.tauxUtilisation}%</div>

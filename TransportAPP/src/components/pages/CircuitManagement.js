@@ -23,7 +23,6 @@ const CircuitManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredCircuits, setFilteredCircuits] = useState([]);
 
-  // Circuits prédéfinis basés sur les données fournies (sans doublons)
   const predefinedCircuits = [
     'HAY MOLAY RCHID',
     'RAHMA', 
@@ -49,7 +48,6 @@ const CircuitManagement = () => {
     setFilteredCircuits(filtered);
   }, [circuits, searchTerm]);
 
-  // Initialiser les circuits prédéfinis s'ils n'existent pas
   useEffect(() => {
     if (circuits.length === 0) {
       predefinedCircuits.forEach(circuitName => {
@@ -69,7 +67,6 @@ const CircuitManagement = () => {
       return;
     }
 
-    // Créer un format d'export pour les circuits
     const circuitData = filteredCircuits.map(circuit => ({
       'Nom Circuit': circuit.nom,
       'Description': circuit.description || '',
@@ -79,18 +76,17 @@ const CircuitManagement = () => {
       'Créé le': circuit.created_at ? new Date(circuit.created_at).toLocaleDateString('fr-FR') : ''
     }));
 
-    // Utiliser le service d'export existant mais adapter pour les circuits
     try {
       const workbook = XLSX.utils.book_new();
       const worksheet = XLSX.utils.json_to_sheet(circuitData);
       
       worksheet['!cols'] = [
-        { wch: 20 }, // Nom Circuit
-        { wch: 30 }, // Description
-        { wch: 10 }, // Status
-        { wch: 15 }, // Nombre Plannings
-        { wch: 40 }, // Points d'Arrêt
-        { wch: 12 }  // Créé le
+        { wch: 20 },
+        { wch: 30 },
+        { wch: 10 },
+        { wch: 15 },
+        { wch: 40 },
+        { wch: 12 }
       ];
 
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Circuits');
@@ -112,7 +108,6 @@ const CircuitManagement = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Gestion des Circuits</h1>
@@ -146,7 +141,6 @@ const CircuitManagement = () => {
         </div>
       </div>
 
-      {/* Statistiques rapides */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="card">
           <div className="flex items-center justify-between">
@@ -201,7 +195,6 @@ const CircuitManagement = () => {
         </div>
       </div>
 
-      {/* Barre de recherche */}
       <div className="card">
         <div className="relative max-w-md">
           <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -215,7 +208,6 @@ const CircuitManagement = () => {
         </div>
       </div>
 
-      {/* Liste des circuits */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <AnimatePresence>
           {filteredCircuits.map((circuit, index) => {
@@ -335,7 +327,6 @@ const CircuitManagement = () => {
         </div>
       )}
 
-      {/* Modal de formulaire */}
       {showForm && (
         <CircuitForm
           circuit={selectedCircuit}
@@ -353,7 +344,6 @@ const CircuitManagement = () => {
   );
 };
 
-// Composant formulaire de circuit
 const CircuitForm = ({ circuit, onClose, onSuccess }) => {
   const { addCircuit } = useData();
   

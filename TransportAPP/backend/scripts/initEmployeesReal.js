@@ -1,6 +1,5 @@
 const mysql = require('mysql2/promise');
 
-// Configuration MySQL
 const dbConfig = {
   host: 'localhost',
   user: 'root',
@@ -139,7 +138,6 @@ async function initializeEmployeesRealMySQL() {
   const connection = await mysql.createConnection(dbConfig);
   console.log('✅ Connexion à la base de données MySQL établie.');
 
-  // Supprimer tous les employés existants
   await connection.query('DELETE FROM employees');
   console.log('🗑️ Employés existants supprimés.');
 

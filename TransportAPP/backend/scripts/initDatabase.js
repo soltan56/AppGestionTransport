@@ -4,7 +4,6 @@ async function initializeDatabase() {
   let connection;
   
   try {
-    // Se connecter à MySQL sans spécifier de base de données
     connection = await mysql.createConnection({
       host: 'localhost',
       user: 'root',
@@ -13,11 +12,9 @@ async function initializeDatabase() {
 
     console.log('✅ Connexion à MySQL réussie');
 
-    // Créer la base de données si elle n'existe pas
     await connection.execute(`CREATE DATABASE IF NOT EXISTS transport`);
     console.log('✅ Base de données "transport" créée ou vérifiée');
 
-    // Fermer la connexion actuelle et se reconnecter à la base transport
     await connection.end();
     
     connection = await mysql.createConnection({
@@ -28,7 +25,6 @@ async function initializeDatabase() {
     });
     console.log('✅ Connexion à la base "transport" réussie');
 
-    // Créer la table users
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS users (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -42,7 +38,6 @@ async function initializeDatabase() {
     `);
     console.log('✅ Table "users" créée');
 
-    // Créer la table employees
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS employees (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -62,7 +57,6 @@ async function initializeDatabase() {
     `);
     console.log('✅ Table "employees" créée');
 
-    // Créer la table circuits
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS circuits (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -74,7 +68,6 @@ async function initializeDatabase() {
     `);
     console.log('✅ Table "circuits" créée');
 
-    // Créer la table buses
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS buses (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -87,7 +80,6 @@ async function initializeDatabase() {
     `);
     console.log('✅ Table "buses" créée');
 
-    // Créer la table plannings
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS plannings (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -105,7 +97,6 @@ async function initializeDatabase() {
     `);
     console.log('✅ Table "plannings" créée');
 
-    // Créer la table weekly_plannings
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS weekly_plannings (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -122,7 +113,6 @@ async function initializeDatabase() {
     `);
     console.log('✅ Table "weekly_plannings" créée');
 
-    // Créer la table weekly_assignments
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS weekly_assignments (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -137,7 +127,6 @@ async function initializeDatabase() {
     `);
     console.log('✅ Table "weekly_assignments" créée');
 
-    // Créer la table ateliers
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS ateliers (
         id INT AUTO_INCREMENT PRIMARY KEY,

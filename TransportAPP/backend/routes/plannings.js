@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-// GET /api/plannings - Récupérer tous les plannings
+
 router.get('/', async (req, res) => {
   try {
     const [rows] = await req.pool.query(`
@@ -17,7 +17,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET /api/plannings/:id - Récupérer un planning par ID
+
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
   try {
@@ -37,7 +37,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// POST /api/plannings - Créer un nouveau planning
+
 router.post('/', async (req, res) => {
   const {
     nom,
@@ -67,7 +67,7 @@ router.post('/', async (req, res) => {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       nom, pointRamassage, circuit, equipe, atelier, 
-      dateDebut, dateFin, heureDebut, heureFin, status, 1 // TODO: récupérer l'ID utilisateur du token
+      dateDebut, dateFin, heureDebut, heureFin, status, 1 
     ]);
     const [rows] = await req.pool.query(`
       SELECT p.*, u.name as created_by_name 
@@ -82,7 +82,6 @@ router.post('/', async (req, res) => {
   }
 });
 
-// PUT /api/plannings/:id - Mettre à jour un planning
 router.put('/:id', async (req, res) => {
   const { id } = req.params;
   const {
@@ -125,7 +124,7 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// DELETE /api/plannings/:id - Supprimer un planning
+
 router.delete('/:id', async (req, res) => {
   const { id } = req.params;
   try {
@@ -140,7 +139,7 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// GET /api/plannings/stats/overview - Statistiques des plannings
+
 router.get('/stats/overview', async (req, res) => {
   try {
     const [rows] = await req.pool.query(`

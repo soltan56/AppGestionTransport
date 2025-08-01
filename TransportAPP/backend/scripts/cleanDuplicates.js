@@ -1,7 +1,6 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
-// Chemin vers la base de données
 const dbPath = path.join(__dirname, '../database.db');
 
 function cleanDuplicates() {
@@ -12,7 +11,6 @@ function cleanDuplicates() {
     }
     console.log('🔧 Analyse des doublons dans la base de données...');
     
-    // Compter le nombre total d'employés
     db.get('SELECT COUNT(*) as total FROM employees', (err, row) => {
       if (err) {
         console.error('Erreur lors du comptage:', err.message);
@@ -22,7 +20,6 @@ function cleanDuplicates() {
       
       console.log(`📊 Nombre total d'employés actuellement: ${row.total}`);
       
-      // Identifier les doublons (même nom et prénom)
       db.all(`
         SELECT nom, prenom, COUNT(*) as count 
         FROM employees 
@@ -49,7 +46,6 @@ function cleanDuplicates() {
         
         console.log('\n🧹 Suppression des doublons (gardant le plus récent)...');
         
-        // Supprimer les doublons en gardant celui avec l'ID le plus élevé (le plus récent)
         db.run(`
           DELETE FROM employees 
           WHERE id NOT IN (
@@ -66,7 +62,6 @@ function cleanDuplicates() {
           
           console.log(`✅ ${this.changes} doublons supprimés.`);
           
-          // Compter le nombre final d'employés
           db.get('SELECT COUNT(*) as total FROM employees', (err, row) => {
             if (err) {
               console.error('Erreur lors du comptage final:', err.message);
@@ -74,7 +69,6 @@ function cleanDuplicates() {
               console.log(`📊 Nombre final d'employés: ${row.total}`);
             }
             
-            // Afficher les statistiques finales
             db.all(`
               SELECT atelier, COUNT(*) as count 
               FROM employees 

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-// GET /api/employees
+
 router.get('/', async (req, res) => {
   try {
     const [rows] = await req.pool.query('SELECT * FROM employees ORDER BY nom, prenom');
@@ -12,7 +12,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// POST /api/employees
+
 router.post('/', async (req, res) => {
   const { nom, prenom, email, telephone, equipe, atelier, type_contrat, date_embauche } = req.body;
 
@@ -33,7 +33,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-// PUT /api/employees/:id
+
 router.put('/:id', async (req, res) => {
   const { id } = req.params;
   const { nom, prenom, email, telephone, equipe, atelier, type_contrat, date_embauche } = req.body;
@@ -58,7 +58,7 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// DELETE /api/employees/:id
+
 router.delete('/:id', async (req, res) => {
   const { id } = req.params;
   try {

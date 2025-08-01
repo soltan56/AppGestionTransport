@@ -16,7 +16,6 @@ async function cleanTeamData() {
 
     console.log('🧹 NETTOYAGE DES DONNÉES "undefined"...\n');
 
-    // Supprimer toutes les assignations avec team = "undefined"
     const [result] = await connection.execute(`
       DELETE FROM weekly_assignments 
       WHERE team = 'undefined' OR team = '' OR team IS NULL
@@ -24,7 +23,6 @@ async function cleanTeamData() {
     
     console.log(`✅ ${result.affectedRows} assignations "undefined" supprimées`);
 
-    // Vérifier les plannings orphelins (sans assignations)
     const [orphanPlannings] = await connection.execute(`
       SELECT wp.id, wp.year, wp.week_number
       FROM weekly_plannings wp
@@ -38,7 +36,6 @@ async function cleanTeamData() {
         console.log(`  - Semaine ${p.week_number}/${p.year} (ID: ${p.id})`);
       });
 
-      // Supprimer les plannings orphelins
       for (const planning of orphanPlannings) {
         await connection.execute('DELETE FROM weekly_plannings WHERE id = ?', [planning.id]);
         console.log(`  ✅ Planning semaine ${planning.week_number}/${planning.year} supprimé`);
@@ -47,11 +44,9 @@ async function cleanTeamData() {
 
     console.log('\n📊 ÉTAT FINAL :');
     
-    // Compter les plannings restants
     const [planningCount] = await connection.execute('SELECT COUNT(*) as count FROM weekly_plannings');
     console.log(`  Plannings restants: ${planningCount[0].count}`);
 
-    // Compter les assignations restantes
     const [assignmentCount] = await connection.execute('SELECT COUNT(*) as count FROM weekly_assignments');
     console.log(`  Assignations restantes: ${assignmentCount[0].count}`);
 

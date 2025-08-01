@@ -58,7 +58,6 @@ const LoginForm = () => {
     const result = await login(formData.email, formData.password, formData.role);
     
     if (!result.success) {
-      // L'erreur est gérée par le contexte
     }
   };
 
@@ -69,7 +68,6 @@ const LoginForm = () => {
       [name]: value
     }));
     
-    // Effacer l'erreur de validation pour ce champ
     if (validationErrors[name]) {
       setValidationErrors(prev => ({
         ...prev,
@@ -125,7 +123,6 @@ const LoginForm = () => {
           className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100"
         >
           <form className="space-y-6" onSubmit={handleSubmit}>
-            {/* Sélection du rôle */}
             <motion.div variants={itemVariants}>
               <label className="block text-sm font-medium text-gray-700 mb-3">
                 <FiUser className="inline mr-2" />
@@ -164,7 +161,6 @@ const LoginForm = () => {
               </div>
             </motion.div>
 
-            {/* Email */}
             <motion.div variants={itemVariants}>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                 <FiMail className="inline mr-2" />
@@ -195,7 +191,6 @@ const LoginForm = () => {
               )}
             </motion.div>
 
-            {/* Mot de passe */}
             <motion.div variants={itemVariants}>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                 <FiLock className="inline mr-2" />
@@ -232,7 +227,6 @@ const LoginForm = () => {
               )}
             </motion.div>
 
-            {/* Message d'erreur global */}
             {error && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -244,7 +238,6 @@ const LoginForm = () => {
               </motion.div>
             )}
 
-            {/* Bouton de connexion */}
             <motion.div variants={itemVariants}>
               <motion.button
                 whileHover={{ scale: 1.02 }}

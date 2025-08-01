@@ -52,12 +52,10 @@ const Sidebar = () => {
       case 'administrateur':
         return [
           ...baseItems,
-          // Droits du chef d'atelier
           { icon: FiCalendar, label: 'Plannings', path: '/dashboard/admin/planning' },
           { icon: FiTruck, label: 'Voir Circuits', path: '/dashboard/admin/circuits' },
           { icon: FiBarChart2, label: 'Statistiques', path: '/dashboard/admin/stats' },
           { icon: FiUsers, label: 'Gestion Bus & Employés', path: '/dashboard/admin/management' },
-          // Droits spécifiques admin
           { icon: FiUsers, label: 'Gestion Utilisateurs', path: '/dashboard/admin/users' },
           { icon: FiSettings, label: 'Groupes & Ateliers', path: '/dashboard/admin/groups' },
           { icon: FiActivity, label: 'Audit Activités', path: '/dashboard/admin/audit' },
@@ -88,7 +86,6 @@ const Sidebar = () => {
       transition={{ duration: 0.3 }}
       className="bg-white shadow-lg border-r border-gray-200 flex flex-col h-full"
     >
-      {/* Header de la sidebar */}
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
           {!isCollapsed && (
@@ -123,7 +120,6 @@ const Sidebar = () => {
         </div>
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
         {menuItems.map((item, index) => {
           const Icon = item.icon;
@@ -166,7 +162,6 @@ const Sidebar = () => {
         })}
       </nav>
 
-      {/* Footer avec rôle utilisateur */}
       {!isCollapsed && (
         <motion.div
           initial={{ opacity: 0 }}

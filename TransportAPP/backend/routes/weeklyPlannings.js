@@ -100,7 +100,6 @@ router.get('/:year/:week', authenticate, async (req, res) => {
   }
 });
 
-// POST /api/weekly-plannings - Créer un nouveau planning hebdomadaire
 router.post('/', authenticate, async (req, res) => {
   const { year, week_number, assignments } = req.body;
   
@@ -124,7 +123,6 @@ router.post('/', authenticate, async (req, res) => {
     let planningId;
     
     if (existingPlanning.length > 0) {
-      // Mettre à jour le planning existant
       planningId = existingPlanning[0].id;
       await connection.execute(`
         UPDATE weekly_plannings 
@@ -132,12 +130,10 @@ router.post('/', authenticate, async (req, res) => {
         WHERE id = ?
       `, [req.user.id || null, planningId]);
       
-      // Supprimer les anciennes assignations
       await connection.execute(`
         DELETE FROM weekly_assignments WHERE weekly_planning_id = ?
       `, [planningId]);
     } else {
-      // Créer un nouveau planning
       const [result] = await connection.execute(`
         INSERT INTO weekly_plannings (year, week_number, created_by) 
         VALUES (?, ?, ?)
@@ -145,7 +141,6 @@ router.post('/', authenticate, async (req, res) => {
       planningId = result.insertId;
     }
     
-    // Ajouter les nouvelles assignations
     for (const [team, employeeIds] of Object.entries(assignments)) {
       if (Array.isArray(employeeIds) && employeeIds.length > 0) {
         for (const employeeId of employeeIds) {
@@ -159,7 +154,6 @@ router.post('/', authenticate, async (req, res) => {
     
     await connection.commit();
     
-    // Récupérer le planning créé/mis à jour
     const [rows] = await connection.query(`
       SELECT wp.*, u.name as created_by_name 
       FROM weekly_plannings wp 
@@ -181,7 +175,6 @@ router.post('/', authenticate, async (req, res) => {
   }
 });
 
-// DELETE /api/weekly-plannings/:id - Supprimer un planning hebdomadaire
 router.delete('/:id', authenticate, async (req, res) => {
   const { id } = req.params;
   
@@ -190,12 +183,10 @@ router.delete('/:id', authenticate, async (req, res) => {
   try {
     await connection.beginTransaction();
     
-    // Supprimer les assignations
     await connection.execute(`
       DELETE FROM weekly_assignments WHERE weekly_planning_id = ?
     `, [id]);
     
-    // Supprimer le planning
     const [result] = await connection.execute(`
       DELETE FROM weekly_plannings WHERE id = ?
     `, [id]);
@@ -217,17 +208,15 @@ router.delete('/:id', authenticate, async (req, res) => {
   }
 });
 
-// GET /api/weekly-plannings/stats/:year - Statistiques pour une année
 router.get('/stats/:year', authenticate, async (req, res) => {
   const { year } = req.params;
   
   try {
-    // Nombre de plannings créés
+    
     const [planningCount] = await req.pool.query(`
       SELECT COUNT(*) as count FROM weekly_plannings WHERE year = ?
     `, [year]);
     
-    // Employés les plus assignés
     const [topEmployees] = await req.pool.query(`
       SELECT e.nom, e.prenom, COUNT(*) as assignments_count
       FROM weekly_assignments wa
@@ -239,7 +228,6 @@ router.get('/stats/:year', authenticate, async (req, res) => {
       LIMIT 10
     `, [year]);
     
-    // Répartition par équipe
     const [teamStats] = await req.pool.query(`
       SELECT wa.team, COUNT(*) as assignments_count
       FROM weekly_assignments wa
@@ -262,12 +250,11 @@ router.get('/stats/:year', authenticate, async (req, res) => {
   }
 });
 
-// DELETE /api/weekly-plannings/:year/:week - Supprimer un planning hebdomadaire
 router.delete('/:year/:week', authenticate, async (req, res) => {
   try {
     const { year, week } = req.params;
     
-    // Vérifier si le planning existe
+    
     const [existingPlanning] = await req.pool.query(
       'SELECT id FROM weekly_plannings WHERE year = ? AND week_number = ?',
       [year, week]
@@ -279,23 +266,23 @@ router.delete('/:year/:week', authenticate, async (req, res) => {
     
     const planningId = existingPlanning[0].id;
     
-    // Démarrer une transaction
+    
     await req.pool.query('START TRANSACTION');
     
     try {
-      // Supprimer d'abord toutes les assignations
+      
       await req.pool.query(
         'DELETE FROM weekly_assignments WHERE weekly_planning_id = ?',
         [planningId]
       );
       
-      // Puis supprimer le planning
+      
       await req.pool.query(
         'DELETE FROM weekly_plannings WHERE id = ?',
         [planningId]
       );
       
-      // Valider la transaction
+      
       await req.pool.query('COMMIT');
       
       res.json({ 
@@ -305,7 +292,7 @@ router.delete('/:year/:week', authenticate, async (req, res) => {
       });
       
     } catch (error) {
-      // Annuler la transaction en cas d'erreur
+      
       await req.pool.query('ROLLBACK');
       throw error;
     }

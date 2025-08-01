@@ -3,8 +3,8 @@ const mysql = require('mysql2/promise');
 const dbConfig = {
   host: 'localhost',
   user: 'root',
-  password: '', // Mets ton mot de passe si besoin
-  database: 'transport_db' // Mets le nom de ta base MySQL
+  password: '', 
+  database: 'transport_db' 
 };
 
 async function createBaseTables() {
@@ -13,7 +13,6 @@ async function createBaseTables() {
   try {
     console.log('🚀 Création des tables de base...');
     
-    // Table employees
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS employees (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -33,7 +32,6 @@ async function createBaseTables() {
     `);
     console.log('✅ Table employees créée');
     
-    // Table circuits
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS circuits (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -47,7 +45,6 @@ async function createBaseTables() {
     `);
     console.log('✅ Table circuits créée');
     
-    // Table buses
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS buses (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -60,7 +57,6 @@ async function createBaseTables() {
     `);
     console.log('✅ Table buses créée');
     
-    // Table plannings
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS plannings (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -89,7 +85,6 @@ async function createBaseTables() {
   }
 }
 
-// Exécuter si le script est appelé directement
 if (require.main === module) {
   createBaseTables();
 }

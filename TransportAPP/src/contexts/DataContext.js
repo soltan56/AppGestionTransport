@@ -2,7 +2,6 @@ import React, { createContext, useContext, useReducer, useEffect } from 'react';
 
 const DataContext = createContext();
 
-// Génération d'ID unique
 let idCounter = Date.now();
 const generateUniqueId = () => {
   return ++idCounter;
@@ -108,13 +107,11 @@ const initialState = {
 export const DataProvider = ({ children }) => {
   const [state, dispatch] = useReducer(dataReducer, initialState);
 
-  // Charger les données depuis localStorage au démarrage (sauf employés)
   useEffect(() => {
     const savedData = localStorage.getItem('transportData');
     if (savedData) {
       try {
         const data = JSON.parse(savedData);
-        // Charger tout sauf les employés (qui viennent de l'API)
         const { employees, ...otherData } = data;
         dispatch({ type: 'LOAD_DATA', payload: otherData });
       } catch (error) {
@@ -122,11 +119,9 @@ export const DataProvider = ({ children }) => {
       }
     }
     
-    // Charger les employés depuis l'API
     fetchEmployees();
   }, []);
 
-  // Sauvegarder dans localStorage à chaque changement (sauf employés)
   useEffect(() => {
     if (!state.loading) {
       const { employees, ...dataToSave } = state;
@@ -134,7 +129,6 @@ export const DataProvider = ({ children }) => {
     }
   }, [state]);
 
-  // API calls pour les employés
   const fetchEmployees = async () => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
@@ -152,7 +146,6 @@ export const DataProvider = ({ children }) => {
     }
   };
 
-  // Actions pour gérer les plannings
   const addPlanning = (planning) => {
     dispatch({ type: 'ADD_PLANNING', payload: planning });
   };
@@ -165,7 +158,6 @@ export const DataProvider = ({ children }) => {
     dispatch({ type: 'DELETE_PLANNING', payload: id });
   };
 
-  // Actions pour gérer les employés
   const addEmployee = async (employee) => {
     try {
       const response = await fetch('http://localhost:3001/api/employees', {
@@ -253,22 +245,16 @@ export const DataProvider = ({ children }) => {
     }
   };
 
-  // Actions pour gérer les bus
   const addBus = (bus) => {
     dispatch({ type: 'ADD_BUS', payload: bus });
   };
-
-  // Actions pour gérer les circuits
   const addCircuit = (circuit) => {
     dispatch({ type: 'ADD_CIRCUIT', payload: circuit });
   };
 
-  // Actions pour gérer les ateliers
   const addAtelier = (atelier) => {
     dispatch({ type: 'ADD_ATELIER', payload: atelier });
   };
-
-  // Statistiques calculées
   const getStats = () => {
     return {
       totalPlannings: state.plannings.length,

@@ -1,14 +1,12 @@
 const mysql = require('mysql2/promise');
 
-// Configuration MySQL
 const dbConfig = {
   host: 'localhost',
   user: 'root',
-  password: '', // Mets ton mot de passe si besoin
-  database: 'transport_db' // Mets le nom de ta base MySQL
+  password: '', 
+  database: 'transport'
 };
 
-// Circuits prédéfinis basés sur les données fournies (sans doublons)
 const predefinedCircuits = [
   {
     nom: 'HAY MOLAY RCHID',
@@ -79,7 +77,6 @@ async function initializeCircuitsMySQL() {
   const connection = await mysql.createConnection(dbConfig);
   console.log('✅ Connexion à la base de données MySQL établie.');
 
-  // Vérifier si des circuits existent déjà
   const [rows] = await connection.query('SELECT COUNT(*) as count FROM circuits');
   if (rows[0].count > 0) {
     console.log(`ℹ️  ${rows[0].count} circuit(s) déjà présent(s) dans la base de données.`);
@@ -93,7 +90,6 @@ async function initializeCircuitsMySQL() {
 
   for (let i = 0; i < predefinedCircuits.length; i++) {
     const circuit = predefinedCircuits[i];
-    // Vérifier si le circuit existe déjà
     const [existing] = await connection.query('SELECT id FROM circuits WHERE nom = ?', [circuit.nom]);
     if (existing.length > 0) {
       console.log(`ℹ️  Circuit "${circuit.nom}" déjà présent (ID: ${existing[0].id})`);
@@ -107,8 +103,8 @@ async function initializeCircuitsMySQL() {
           circuit.description,
           circuit.distance,
           circuit.status,
-          null, // duree_estimee (non fourni)
-          null  // points_arret (non fourni)
+          null,
+          null
         ]
       );
       inserted++;
@@ -126,7 +122,6 @@ async function initializeCircuitsMySQL() {
   await connection.end();
 }
 
-// Exécuter l'initialisation si le script est appelé directement
 if (require.main === module) {
   console.log('🚀 Initialisation des circuits prédéfinis (MySQL)...');
   initializeCircuitsMySQL();

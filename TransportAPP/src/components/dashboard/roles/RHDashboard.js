@@ -14,7 +14,6 @@ import {
   FiTrendingDown
 } from 'react-icons/fi';
 
-// Composant principal RH Dashboard
 const RHHome = () => {
   const navigate = useNavigate();
   
@@ -40,7 +39,6 @@ const RHHome = () => {
 
   return (
     <div className="space-y-8">
-      {/* En-tête */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Tableau de Bord RH</h1>
@@ -56,7 +54,6 @@ const RHHome = () => {
         </motion.button>
       </div>
 
-      {/* Statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, index) => (
           <motion.div
@@ -92,7 +89,6 @@ const RHHome = () => {
         ))}
       </div>
 
-      {/* Actions rapides */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <motion.div
           whileHover={{ scale: 1.02 }}
@@ -151,9 +147,7 @@ const RHHome = () => {
         </motion.div>
       </div>
 
-      {/* Contenu principal */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Activités récentes */}
         <div className="card">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Activités Récentes</h3>
           <div className="space-y-4">
@@ -183,7 +177,6 @@ const RHHome = () => {
           </div>
         </div>
 
-        {/* Demandes en attente */}
         <div className="card">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900">Demandes en Attente</h3>
@@ -214,7 +207,6 @@ const RHHome = () => {
         </div>
       </div>
 
-      {/* Rapports rapides */}
       <div className="card">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900">Rapports Rapides</h3>
@@ -249,7 +241,6 @@ const RHHome = () => {
   );
 };
 
-// Pages individuelles
 const InterimPage = () => {
   const TempWorkerManagement = React.lazy(() => import('../../pages/TempWorkerManagement'));
   

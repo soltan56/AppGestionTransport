@@ -28,7 +28,6 @@ const EmployeeManagement = () => {
 
   const [filteredEmployees, setFilteredEmployees] = useState([]);
 
-  // Employés prédéfinis basés sur les données fournies
   const predefinedEmployees = [
     'DENNI AZIZ', 'EL BAKRI REDOUANE', 'FADEL Imad', 'JAMILI MOHAMED', 'SOFIANE MOURAD',
     'WAKRIM MOHAMED', 'KARNBAH MOHAMED', 'MOUDAKIR SMAIN', 'FEROUAL ABDELALI', 'AZLAG HASSAN',
@@ -76,8 +75,6 @@ const EmployeeManagement = () => {
     setFilteredEmployees(filtered);
   }, [employees, searchTerm, filterTeam]);
 
-  // Les employés sont maintenant chargés depuis l'API via le DataContext
-
   const handleExportEmployees = () => {
     if (filteredEmployees.length === 0) {
       alert('Aucun employé à exporter');
@@ -103,18 +100,18 @@ const EmployeeManagement = () => {
       const worksheet = XLSX.utils.json_to_sheet(employeeData);
       
       worksheet['!cols'] = [
-        { wch: 20 }, // Nom
-        { wch: 20 }, // Prénom
-        { wch: 40 }, // Point de Ramassage
-        { wch: 20 }, // Circuit Affecté
-        { wch: 30 }, // Email
-        { wch: 15 }, // Téléphone
-        { wch: 12 }, // Type Contrat
-        { wch: 10 }, // Équipe
-        { wch: 20 }, // Atelier
-        { wch: 12 }, // Date Embauche
-        { wch: 10 }, // Status
-        { wch: 12 }  // Créé le
+        { wch: 20 },
+        { wch: 20 },
+        { wch: 40 },
+        { wch: 20 },
+        { wch: 30 },
+        { wch: 15 },
+        { wch: 12 },
+        { wch: 10 },
+        { wch: 20 },
+        { wch: 12 },
+        { wch: 10 },
+        { wch: 12 }  
       ];
 
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Employés');
@@ -189,7 +186,6 @@ const EmployeeManagement = () => {
         </div>
       </div>
 
-      {/* Statistiques rapides */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="card">
           <div className="flex items-center justify-between">
@@ -244,7 +240,6 @@ const EmployeeManagement = () => {
         </div>
       </div>
 
-      {/* Filtres et recherche */}
       <div className="card">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0 md:space-x-4">
           <div className="relative flex-1 max-w-md">
@@ -276,7 +271,6 @@ const EmployeeManagement = () => {
         </div>
       </div>
 
-      {/* Liste des employés */}
       <div className="card">
         {filteredEmployees.length > 0 ? (
           <div className="overflow-x-auto">
@@ -401,7 +395,6 @@ const EmployeeManagement = () => {
         )}
       </div>
 
-      {/* Modal de formulaire */}
       {showForm && (
         <EmployeeForm
           employee={selectedEmployee}
@@ -419,7 +412,6 @@ const EmployeeManagement = () => {
   );
 };
 
-// Composant formulaire d'employé
 const EmployeeForm = ({ employee, onClose, onSuccess }) => {
   const { addEmployee, updateEmployee } = useData();
   
@@ -490,10 +482,8 @@ const EmployeeForm = ({ employee, onClose, onSuccess }) => {
 
       let result;
       if (employee) {
-        // Modification d'un employé existant
         result = await updateEmployee(employee.id, employeeData);
       } else {
-        // Création d'un nouvel employé
         result = await addEmployee(employeeData);
       }
       

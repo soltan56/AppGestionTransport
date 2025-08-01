@@ -42,7 +42,6 @@ async function resetPlannings() {
   }
 }
 
-// Demander confirmation avant reset
 const readline = require('readline');
 const rl = readline.createInterface({
   input: process.stdin,

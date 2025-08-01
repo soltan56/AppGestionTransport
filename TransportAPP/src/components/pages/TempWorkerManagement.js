@@ -25,7 +25,7 @@ const TempWorkerManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredWorkers, setFilteredWorkers] = useState([]);
 
-  // Filtrer uniquement les intérimaires
+  
   const tempWorkers = employees.filter(emp => emp.typeContrat === 'Intérimaire');
 
   useEffect(() => {
@@ -65,16 +65,16 @@ const TempWorkerManagement = () => {
       const worksheet = XLSX.utils.json_to_sheet(workerData);
       
       worksheet['!cols'] = [
-        { wch: 20 }, // Nom
-        { wch: 20 }, // Prénom
-        { wch: 30 }, // Email
-        { wch: 15 }, // Téléphone
-        { wch: 10 }, // Équipe
-        { wch: 20 }, // Atelier
-        { wch: 12 }, // Date Embauche
-        { wch: 12 }, // Date Fin Contrat
-        { wch: 10 }, // Status
-        { wch: 12 }  // Créé le
+        { wch: 20 }, 
+        { wch: 20 }, 
+        { wch: 30 }, 
+        { wch: 15 }, 
+        { wch: 10 }, 
+        { wch: 20 }, 
+        { wch: 12 }, 
+        { wch: 12 }, 
+        { wch: 10 }, 
+        { wch: 12 }  
       ];
 
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Intérimaires');
@@ -111,7 +111,7 @@ const TempWorkerManagement = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Gestion des Intérimaires</h1>
@@ -145,7 +145,7 @@ const TempWorkerManagement = () => {
         </div>
       </div>
 
-      {/* Statistiques rapides */}
+      
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="card">
           <div className="flex items-center justify-between">
@@ -209,7 +209,7 @@ const TempWorkerManagement = () => {
         </div>
       </div>
 
-      {/* Barre de recherche */}
+      
       <div className="card">
         <div className="relative max-w-md">
           <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -223,7 +223,7 @@ const TempWorkerManagement = () => {
         </div>
       </div>
 
-      {/* Liste des intérimaires */}
+      
       <div className="card">
         {filteredWorkers.length > 0 ? (
           <div className="overflow-x-auto">
@@ -348,7 +348,7 @@ const TempWorkerManagement = () => {
         )}
       </div>
 
-      {/* Modal de formulaire */}
+      
       {showForm && (
         <TempWorkerForm
           worker={selectedWorker}
@@ -366,7 +366,7 @@ const TempWorkerManagement = () => {
   );
 };
 
-// Composant formulaire d'intérimaire
+
 const TempWorkerForm = ({ worker, onClose, onSuccess }) => {
   const { addEmployee } = useData();
   
@@ -380,7 +380,6 @@ const TempWorkerForm = ({ worker, onClose, onSuccess }) => {
     dateEmbauche: worker?.dateEmbauche || '',
     dateFin: worker?.dateFin || '',
     status: worker?.status || 'actif',
-    // Toujours intérimaire pour ce formulaire
     typeContrat: 'Intérimaire'
   });
 

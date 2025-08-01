@@ -29,20 +29,17 @@ function testEmployeesAPI() {
           return;
         }
         
-        // Analyse des employés
         const withChef = employees.filter(emp => emp.atelier_chef_id !== null && emp.atelier_chef_id !== undefined);
         const withoutChef = employees.filter(emp => emp.atelier_chef_id === null || emp.atelier_chef_id === undefined);
         
         console.log(`  - Avec chef assigné: ${withChef.length}`);
         console.log(`  - Sans chef assigné: ${withoutChef.length}`);
         
-        // Échantillon des employés
         console.log('\n👥 Premiers employés:');
         employees.slice(0, 10).forEach((emp, index) => {
           console.log(`  ${index + 1}. ${emp.nom} ${emp.prenom} (ID: ${emp.id}, Chef: ${emp.atelier_chef_id || 'Non assigné'})`);
         });
         
-        // Vérifier les types de données
         console.log('\n🔍 Analyse des données:');
         const firstEmp = employees[0];
         console.log('  Structure du premier employé:', Object.keys(firstEmp));

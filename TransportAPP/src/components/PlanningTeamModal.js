@@ -12,7 +12,6 @@ const equipes = [
 const PlanningTeamModal = ({ open, onClose, semaine, annee, atelier_id, role, employes = [], affectations = {}, onAffectationChange }) => {
   const [selectedEquipe, setSelectedEquipe] = useState(equipes[0].key);
 
-  // Liste des employés déjà affectés à une équipe cette semaine
   const allAffectes = Object.entries(affectations).reduce((acc, [equipe, ids]) => {
     ids.forEach((id) => {
       acc[id] = equipe;
@@ -20,19 +19,15 @@ const PlanningTeamModal = ({ open, onClose, semaine, annee, atelier_id, role, em
     return acc;
   }, {});
 
-  // Filtrer les employés selon le rôle
   const employesEquipe = employes.filter((e) => {
     if (role === 'admin') return true;
     return e.atelier_id === atelier_id;
   });
-
-  // Liste des employés pour l'équipe sélectionnée
   const employesForEquipe = employesEquipe.filter((e) => e.equipe === selectedEquipe);
 
-  // Gestion du clic sur une case employé
   const handleToggle = (employeId) => {
     const dejaAffecte = allAffectes[employeId];
-    if (dejaAffecte && dejaAffecte !== selectedEquipe) return; // Ne rien faire si déjà affecté ailleurs
+    if (dejaAffecte && dejaAffecte !== selectedEquipe) return; 
     const current = affectations[selectedEquipe] || [];
     let next;
     if (current.includes(employeId)) {

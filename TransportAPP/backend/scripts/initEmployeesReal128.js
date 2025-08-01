@@ -1,14 +1,12 @@
 const mysql = require('mysql2/promise');
 
-// Configuration MySQL
 const dbConfig = {
   host: 'localhost',
   user: 'root',
-  password: '', // Mets ton mot de passe si besoin
-  database: 'transport_db' // Mets le nom de ta base MySQL
+  password: '',
+  database: 'transport'
 };
 
-// Données des 128 employés avec leurs informations exactes
 const employeesData = [
   { nom: 'DENNI', prenom: 'AZIZ', pointRamassage: 'HAY ELBARAKA RUE JOUDART', circuit: 'HAY MOLAY RCHID', equipe: 'SOIR', atelier: 'MPC' },
   { nom: 'EL BAKRI', prenom: 'REDOUANE', pointRamassage: ' FARAH EL SALLAM, ', circuit: 'RAHMA', equipe: 'SOIR', atelier: 'MPC' },
@@ -139,7 +137,6 @@ async function initEmployeesMySQL() {
   const connection = await mysql.createConnection(dbConfig);
   console.log('✅ Connexion à la base de données MySQL établie.');
 
-  // Supprimer tous les employés existants
   await connection.query('DELETE FROM employees');
   console.log('🗑️ Employés existants supprimés.');
 

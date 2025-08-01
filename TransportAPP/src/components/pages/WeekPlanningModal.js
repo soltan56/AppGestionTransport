@@ -16,7 +16,7 @@ import {
   FiEdit
 } from 'react-icons/fi';
 
-// Configuration des équipes avec couleurs et icônes
+
 const TEAMS = [
   { 
     key: 'Matin', 
@@ -71,7 +71,6 @@ const WeekPlanningModal = ({
   const [assignments, setAssignments] = useState(initialAssignments);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Vérifier si la semaine est dans le passé
   const isPastWeek = () => {
     if (!week || !year) return false;
     
@@ -84,7 +83,6 @@ const WeekPlanningModal = ({
     return false;
   };
 
-  // Obtenir le numéro de semaine d'une date
   const getWeekNumber = (date) => {
     const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
     const dayNum = d.getUTCDay() || 7;
@@ -96,7 +94,6 @@ const WeekPlanningModal = ({
   const isWeekPast = isPastWeek();
   const isReadOnly = readOnly || isWeekPast;
 
-  // Réinitialiser quand le modal s'ouvre
   useEffect(() => {
     if (isOpen) {
       setAssignments(initialAssignments);
@@ -107,7 +104,6 @@ const WeekPlanningModal = ({
 
 
 
-  // Filtrer les employés selon le terme de recherche
   const filteredEmployees = employees.filter(emp => {
     const fullName = `${emp.nom} ${emp.prenom}`.toLowerCase();
     const searchLower = searchTerm.toLowerCase();
@@ -116,7 +112,6 @@ const WeekPlanningModal = ({
            emp.point_ramassage?.toLowerCase().includes(searchLower);
   });
 
-  // Obtenir les employés assignés à toutes les équipes (pour éviter la double assignation)
   const getAllAssignedEmployees = () => {
     const assigned = new Set();
     Object.values(assignments).forEach(teamEmployees => {
@@ -127,12 +122,9 @@ const WeekPlanningModal = ({
     return assigned;
   };
 
-  // Vérifier si un employé est assigné
   const isEmployeeAssigned = (employeeId) => {
     return getAllAssignedEmployees().has(employeeId);
   };
-
-  // Obtenir l'équipe d'assignation d'un employé
   const getEmployeeTeam = (employeeId) => {
     for (const [team, employeeIds] of Object.entries(assignments)) {
       if (Array.isArray(employeeIds) && employeeIds.includes(employeeId)) {
@@ -142,26 +134,21 @@ const WeekPlanningModal = ({
     return null;
   };
 
-  // Assigner/désassigner un employé à l'équipe sélectionnée
   const toggleEmployeeAssignment = (employeeId) => {
-    // Empêcher la modification si la semaine est passée ou en mode lecture seule
     if (isReadOnly) return;
     
     const currentTeamAssignments = assignments[selectedTeam] || [];
     const isCurrentlyAssigned = currentTeamAssignments.includes(employeeId);
     
     if (isCurrentlyAssigned) {
-      // Désassigner de l'équipe actuelle
       const newAssignments = currentTeamAssignments.filter(id => id !== employeeId);
       setAssignments(prev => ({
         ...prev,
         [selectedTeam]: newAssignments
       }));
     } else {
-      // Vérifier si l'employé est déjà assigné à une autre équipe
       const assignedTeam = getEmployeeTeam(employeeId);
       if (assignedTeam && assignedTeam !== selectedTeam) {
-        // Désassigner de l'ancienne équipe et assigner à la nouvelle
         const oldTeamAssignments = assignments[assignedTeam] || [];
         const newOldTeamAssignments = oldTeamAssignments.filter(id => id !== employeeId);
         
@@ -171,7 +158,6 @@ const WeekPlanningModal = ({
           [selectedTeam]: [...(prev[selectedTeam] || []), employeeId]
         }));
       } else {
-        // Assigner à l'équipe sélectionnée
         setAssignments(prev => ({
           ...prev,
           [selectedTeam]: [...currentTeamAssignments, employeeId]
@@ -180,21 +166,17 @@ const WeekPlanningModal = ({
     }
   };
 
-  // Compter les assignations par équipe
   const getTeamCount = (teamKey) => {
     return (assignments[teamKey] || []).length;
   };
-
-  // Obtenir le total des assignations
   const getTotalAssignments = () => {
     return Object.values(assignments).reduce((total, teamEmployees) => {
       return total + (Array.isArray(teamEmployees) ? teamEmployees.length : 0);
     }, 0);
   };
 
-  // Sauvegarder et fermer
   const handleSave = () => {
-    if (isReadOnly) return; // Empêcher la sauvegarde pour les semaines passées ou en mode lecture seule
+    if (isReadOnly) return; 
     onSave(assignments);
   };
 
@@ -285,7 +267,7 @@ const WeekPlanningModal = ({
           </div>
 
           <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
-            {/* Sidebar des équipes */}
+            
             <div className="lg:w-80 bg-gray-50 border-r p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Équipes</h3>
               
@@ -336,7 +318,7 @@ const WeekPlanningModal = ({
                 })}
               </div>
 
-              {/* Résumé */}
+              
               <div className="mt-6 p-4 bg-white rounded-xl border">
                 <h4 className="font-semibold text-gray-900 mb-2">Résumé</h4>
                 <div className="space-y-2 text-sm">
@@ -356,9 +338,9 @@ const WeekPlanningModal = ({
               </div>
             </div>
 
-            {/* Zone principale des employés */}
+            
             <div className="flex-1 flex flex-col">
-              {/* Header équipe sélectionnée */}
+              
               <div className="p-6 border-b bg-white">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
@@ -389,7 +371,7 @@ const WeekPlanningModal = ({
                   </div>
                 </div>
 
-                {/* Barre de recherche */}
+                
                 <div className="relative">
                   <input
                     type="text"
@@ -407,9 +389,9 @@ const WeekPlanningModal = ({
                 </div>
               </div>
 
-              {/* Liste des employés */}
+              
               <div className="flex-1 p-6 overflow-y-auto" style={{ maxHeight: '60vh' }}>
-                {/* Info scroll en haut */}
+                
                 {filteredEmployees.length > 9 && (
                   <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
                     <p className="text-sm text-blue-700 font-medium text-center">
@@ -484,7 +466,7 @@ const WeekPlanningModal = ({
                   </div>
                 )}
 
-                {/* Indicateur de scroll si beaucoup d'employés */}
+                
                 {filteredEmployees.length > 9 && (
                   <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
                     <p className="text-sm text-blue-700 font-medium">
@@ -497,7 +479,7 @@ const WeekPlanningModal = ({
                 )}
               </div>
 
-              {/* Footer avec actions */}
+              
               <div className="p-6 border-t bg-gray-50">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">

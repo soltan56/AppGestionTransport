@@ -1,14 +1,12 @@
 const mysql = require('mysql2/promise');
 
-// Configuration MySQL
 const dbConfig = {
   host: 'localhost',
   user: 'root',
-  password: '', // Mets ton mot de passe si besoin
-  database: 'transport_db' // Mets le nom de ta base MySQL
+  password: '',
+  database: 'transport'
 };
 
-// Employés prédéfinis basés sur les données fournies
 const predefinedEmployees = [
   'DENNI AZIZ', 'EL BAKRI REDOUANE', 'FADEL Imad', 'JAMILI MOHAMED', 'SOFIANE MOURAD',
   'WAKRIM MOHAMED', 'KARNBAH MOHAMED', 'MOUDAKIR SMAIN', 'FEROUAL ABDELALI', 'AZLAG HASSAN',
@@ -39,7 +37,7 @@ const predefinedEmployees = [
 
 const teams = ['Matin', 'Soir', 'Nuit', 'Normal'];
 const contractTypes = ['CDI', 'CDD', 'Intérimaire'];
-const ateliers = ['Atelier Principal', 'Atelier Nord', 'Atelier Sud', 'Maintenance'];
+const ateliers = ['ACC', 'EOLE', 'VEG', 'Qualite'];
 
 function generateRandomDate(startYear = 2020, endYear = 2024) {
   const start = new Date(startYear, 0, 1);
@@ -69,7 +67,6 @@ async function initializeEmployeesMySQL() {
   const connection = await mysql.createConnection(dbConfig);
   console.log('✅ Connexion à la base de données MySQL établie.');
 
-  // Vérifier si des employés existent déjà
   const [rows] = await connection.query('SELECT COUNT(*) as count FROM employees');
   if (rows[0].count > 0) {
     console.log(`ℹ️  ${rows[0].count} employé(s) déjà présent(s) dans la base de données.`);
@@ -91,7 +88,6 @@ async function initializeEmployeesMySQL() {
     const telephone = generatePhoneNumber();
     const dateEmbauche = generateRandomDate();
 
-    // Vérifier si l'employé existe déjà
     const [existing] = await connection.query('SELECT id FROM employees WHERE nom = ? AND prenom = ?', [nom, prenom]);
     if (existing.length > 0) {
       console.log(`ℹ️  Employé "${nom} ${prenom}" déjà présent (ID: ${existing[0].id})`);
@@ -120,7 +116,6 @@ async function initializeEmployeesMySQL() {
   await connection.end();
 }
 
-// Exécuter l'initialisation si le script est appelé directement
 if (require.main === module) {
   console.log('🚀 Initialisation des employés prédéfinis (MySQL)...');
   console.log(`📝 ${predefinedEmployees.length} employés à traiter...`);

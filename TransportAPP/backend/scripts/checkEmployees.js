@@ -3,8 +3,8 @@ const mysql = require('mysql2/promise');
 const dbConfig = {
   host: 'localhost',
   user: 'root',
-  password: '', // Mets ton mot de passe si besoin
-  database: 'transport_db' // Mets le nom de ta base MySQL
+  password: '', 
+  database: 'transport_db' 
 };
 
 async function checkEmployees() {
@@ -13,11 +13,9 @@ async function checkEmployees() {
   try {
     console.log('🔍 Vérification des employés dans la base de données...\n');
     
-    // Compter le total des employés
     const [totalResult] = await connection.query('SELECT COUNT(*) as total FROM employees');
     console.log(`📊 Total employés: ${totalResult[0].total}`);
     
-    // Répartition par chef
     const [chefResult] = await connection.query(`
       SELECT atelier_chef_id, COUNT(*) as count 
       FROM employees 
@@ -33,7 +31,6 @@ async function checkEmployees() {
       }
     });
     
-    // Lister les premiers employés pour vérification
     const [employeesSample] = await connection.query(`
       SELECT id, nom, prenom, atelier_chef_id 
       FROM employees 

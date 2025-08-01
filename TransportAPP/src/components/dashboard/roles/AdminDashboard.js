@@ -17,7 +17,6 @@ import {
   FiX
 } from 'react-icons/fi';
 
-// Composant principal Admin Dashboard
 const AdminHome = () => {
   const navigate = useNavigate();
   
@@ -43,15 +42,14 @@ const AdminHome = () => {
   };
 
   const activeUsers = [
-    { name: 'Marie Dubois', role: 'Chef', status: 'online', lastActivity: 'Il y a 5min' },
-    { name: 'Pierre Martin', role: 'RH', status: 'online', lastActivity: 'Il y a 12min' },
-    { name: 'Sophie Bernard', role: 'Chef', status: 'away', lastActivity: 'Il y a 35min' },
-    { name: 'Jean Dupont', role: 'RH', status: 'offline', lastActivity: 'Il y a 2h' }
+    { name: 'Youssef Dirgham (TEST)', role: 'Chef', status: 'online', lastActivity: 'Il y a 5min' },
+    { name: 'Youssef Dirgham (TEST)', role: 'RH', status: 'online', lastActivity: 'Il y a 12min' },
+    { name: 'Youssef Dirgham (TEST)', role: 'Chef', status: 'away', lastActivity: 'Il y a 35min' },
+    { name: 'Youssef Dirgham (TEST)', role: 'RH', status: 'offline', lastActivity: 'Il y a 2h' }
   ];
 
   return (
     <div className="space-y-8">
-      {/* En-tête */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Tableau de Bord Administrateur</h1>
@@ -67,7 +65,6 @@ const AdminHome = () => {
         </motion.button>
       </div>
 
-      {/* Statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, index) => (
           <motion.div
@@ -95,7 +92,6 @@ const AdminHome = () => {
         ))}
       </div>
 
-      {/* Actions rapides */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <motion.div
           whileHover={{ scale: 1.02 }}
@@ -154,7 +150,6 @@ const AdminHome = () => {
         </motion.div>
       </div>
 
-      {/* État du système */}
       <div className="card">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">État du Système</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -192,9 +187,7 @@ const AdminHome = () => {
         </div>
       </div>
 
-      {/* Contenu principal */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Activités récentes */}
         <div className="card">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Activités Récentes</h3>
           <div className="space-y-4">
@@ -233,7 +226,6 @@ const AdminHome = () => {
           </div>
         </div>
 
-        {/* Utilisateurs actifs */}
         <div className="card">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900">Utilisateurs Actifs</h3>
@@ -279,7 +271,6 @@ const AdminHome = () => {
   );
 };
 
-// Pages héritées du chef (pour admin)
 const PlanningPage = () => {
   return <PlanningCreation />;
 };
@@ -321,7 +312,6 @@ const ManagementPage = () => {
   );
 };
 
-// Pages individuelles admin
 const UsersPage = () => (
   <div className="space-y-6">
     <h2 className="text-2xl font-bold text-gray-900">Gestion des Utilisateurs</h2>
@@ -362,12 +352,10 @@ const AdminDashboard = () => {
   return (
     <Routes>
       <Route path="/" element={<AdminHome />} />
-      {/* Routes héritées du chef */}
       <Route path="/planning" element={<PlanningPage />} />
       <Route path="/circuits" element={<CircuitsPage />} />
       <Route path="/stats" element={<StatsPage />} />
       <Route path="/management" element={<ManagementPage />} />
-      {/* Routes spécifiques admin */}
       <Route path="/users" element={<UsersPage />} />
       <Route path="/groups" element={<GroupsPage />} />
       <Route path="/audit" element={<AuditPage />} />
