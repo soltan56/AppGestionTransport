@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Transport APP - Démarrage propre</title>
+    <style>
+        body { 
+            font-family: Arial; 
+            max-width: 500px; 
+            margin: 50px auto; 
+            padding: 20px; 
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            background: rgba(255,255,255,0.1);
+            padding: 40px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        .btn {
+            display: inline-block;
+            padding: 15px 30px;
+            margin: 10px;
+            background: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        .btn:hover { background: #45a049; }
+        .btn.danger { background: #f44336; }
+        .btn.danger:hover { background: #da190b; }
+        .status { 
+            margin: 20px 0; 
+            padding: 15px; 
+            border-radius: 8px; 
+            background: rgba(255,255,255,0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Transport APP</h1>
+        <h2>Démarrage propre</h2>
+        
+        <div class="status" id="status">
+            Prêt pour le nettoyage et la connexion
+        </div>
+        
+        <button class="btn danger" onclick="forceCleanAndLogin()">
+            🧹 Nettoyage total + Connexion auto
+        </button>
+        
+        <br>
+        
+        <a href="/login" class="btn">
+            🔑 Aller directement au login
+        </a>
+        
+        <a href="/emergency-reset.html" class="btn">
+            🆘 Page d'urgence
+        </a>
+    </div>
+    
+    <script>
+        async function forceCleanAndLogin() {
+            const statusDiv = document.getElementById('status');
+            
+            // Étape 1: Nettoyage brutal
+            statusDiv.innerHTML = '🧹 Nettoyage en cours...';
+            localStorage.clear();
+            sessionStorage.clear();
+            
+            // Nettoyage cookies
+            document.cookie.split(";").forEach(c => {
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+            });
+            
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Étape 2: Connexion automatique
+            statusDiv.innerHTML = '🔐 Connexion automatique...';
+            
+            try {
+                const response = await fetch('http://localhost:3001/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        email: 'admin@test.com',
+                        password: 'admin123',
+                        role: 'administrateur'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Sauvegarder
+                    localStorage.setItem('authToken', data.token);
+                    localStorage.setItem('userData', JSON.stringify(data.user));
+                    
+                    statusDiv.innerHTML = '✅ Connecté ! Redirection vers dashboard...';
+                    
+                    setTimeout(() => {
+                        window.location.href = '/dashboard/admin';
+                    }, 1500);
+                } else {
+                    statusDiv.innerHTML = '❌ Erreur login: ' + data.error;
+                }
+            } catch (error) {
+                statusDiv.innerHTML = '❌ Erreur connexion: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

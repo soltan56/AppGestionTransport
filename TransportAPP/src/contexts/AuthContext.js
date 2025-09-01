@@ -56,7 +56,20 @@ const initialState = {
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
+  // Charger le token depuis localStorage (sans validation automatique)
   useEffect(() => {
+    // DÉSACTIVÉ - Plus de nettoyage automatique
+    // const needsCleanup = localStorage.getItem('needsCleanup');
+    // if (!needsCleanup) {
+    //   console.log('🧹 Nettoyage unique pour migration MySQL...');
+    //   localStorage.clear();
+    //   sessionStorage.clear();
+    //   localStorage.setItem('needsCleanup', 'done');
+    //   window.location.href = '/login';
+    //   return;
+    // }
+
+    // Chargement normal si déjà nettoyé
     const token = localStorage.getItem('authToken');
     const userData = localStorage.getItem('userData');
     
@@ -67,7 +80,9 @@ export const AuthProvider = ({ children }) => {
           type: 'LOGIN_SUCCESS',
           payload: { user, token }
         });
+        console.log('✅ Session restaurée sans validation');
       } catch (error) {
+        console.log('❌ Données corrompues, nettoyage...');
         localStorage.removeItem('authToken');
         localStorage.removeItem('userData');
       }
@@ -123,6 +138,7 @@ export const AuthProvider = ({ children }) => {
 
   const value = {
     ...state,
+    isAuthenticated: !!state.user && !!state.token,
     login,
     logout,
     clearError,

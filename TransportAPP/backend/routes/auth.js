@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-
+// POST /api/auth/login - Connexion réelle avec MySQL
 router.post('/login', async (req, res) => {
   const { email, password, role } = req.body;
 

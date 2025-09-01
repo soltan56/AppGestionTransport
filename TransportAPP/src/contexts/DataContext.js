@@ -1,7 +1,9 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import { useAuth } from './AuthContext';
 
 const DataContext = createContext();
 
+// Génération d'ID unique
 let idCounter = Date.now();
 const generateUniqueId = () => {
   return ++idCounter;
@@ -21,6 +23,12 @@ const dataReducer = (state, action) => {
         ...state,
         employees: action.payload,
         loading: false
+      };
+    
+    case 'SET_ATELIERS':
+      return {
+        ...state,
+        ateliers: action.payload
       };
     
     case 'ADD_PLANNING':
@@ -106,22 +114,35 @@ const initialState = {
 
 export const DataProvider = ({ children }) => {
   const [state, dispatch] = useReducer(dataReducer, initialState);
+  const { user, isAuthenticated } = useAuth();
 
+  // Charger les données depuis localStorage au démarrage (sauf employés)
   useEffect(() => {
     const savedData = localStorage.getItem('transportData');
     if (savedData) {
       try {
         const data = JSON.parse(savedData);
+        // Charger tout sauf les employés (qui viennent de l'API)
         const { employees, ...otherData } = data;
         dispatch({ type: 'LOAD_DATA', payload: otherData });
       } catch (error) {
         console.error('Erreur lors du chargement des données:', error);
       }
     }
-    
-    fetchEmployees();
   }, []);
 
+  // Charger les employés uniquement si l'utilisateur est authentifié
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      console.log('🔄 Utilisateur authentifié, chargement des employés...');
+      fetchEmployees();
+    } else if (!isAuthenticated) {
+      // Pas authentifié, vider les employés
+      dispatch({ type: 'SET_EMPLOYEES', payload: [] });
+    }
+  }, [isAuthenticated, user]);
+
+  // Sauvegarder dans localStorage à chaque changement (sauf employés)
   useEffect(() => {
     if (!state.loading) {
       const { employees, ...dataToSave } = state;
@@ -129,15 +150,31 @@ export const DataProvider = ({ children }) => {
     }
   }, [state]);
 
+  // API calls pour les employés
   const fetchEmployees = async () => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
-      const response = await fetch('http://localhost:3001/api/employees');
+      const token = localStorage.getItem('authToken');
+      
+
+      
+      const response = await fetch('http://localhost:3001/api/employees', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
       if (response.ok) {
         const employees = await response.json();
+
         dispatch({ type: 'SET_EMPLOYEES', payload: employees });
+      } else if (response.status === 401) {
+        console.error('Token invalide - veuillez vous reconnecter');
+        dispatch({ type: 'SET_EMPLOYEES', payload: [] });
       } else {
         console.error('Erreur lors de la récupération des employés');
+        const errorData = await response.json();
+        console.error('Détail de l\'erreur:', errorData.error);
         dispatch({ type: 'SET_EMPLOYEES', payload: [] });
       }
     } catch (error) {
@@ -146,6 +183,7 @@ export const DataProvider = ({ children }) => {
     }
   };
 
+  // Actions pour gérer les plannings
   const addPlanning = (planning) => {
     dispatch({ type: 'ADD_PLANNING', payload: planning });
   };
@@ -158,32 +196,40 @@ export const DataProvider = ({ children }) => {
     dispatch({ type: 'DELETE_PLANNING', payload: id });
   };
 
+  // Actions pour gérer les employés
   const addEmployee = async (employee) => {
     try {
+      const token = localStorage.getItem('authToken');
       const response = await fetch('http://localhost:3001/api/employees', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           nom: employee.nom,
           prenom: employee.prenom,
-          email: employee.email,
-          telephone: employee.telephone,
-          equipe: employee.equipe,
-          atelier: employee.atelier,
-          point_ramassage: employee.pointRamassage || employee.point_ramassage,
-          circuit: employee.circuit,
-          date_embauche: employee.dateEmbauche
+          email: employee.email || null,
+          telephone: employee.telephone || null,
+          equipe: employee.equipe || null,
+          // accept either atelier_id or atelier name
+          atelier_id: employee.atelier_id || undefined,
+          atelier: employee.atelier || undefined,
+          point_ramassage: employee.pointRamassage || employee.point_ramassage || null,
+          circuit_affecte: employee.circuit || employee.circuit_affecte || null,
+          date_embauche: employee.dateEmbauche || employee.date_embauche || null,
+          type_contrat: employee.type_contrat || employee.typeContrat || 'CDI'
         }),
       });
       
       if (response.ok) {
         const newEmployee = await response.json();
-        dispatch({ type: 'ADD_EMPLOYEE', payload: newEmployee });
+        // Refresh from API to keep state consistent
+        await fetchEmployees();
         return newEmployee;
       } else {
-        console.error('Erreur lors de l\'ajout de l\'employé');
+        const errorData = await response.json();
+        console.error('Erreur lors de l\'ajout de l\'employé:', errorData.error);
         return null;
       }
     } catch (error) {
@@ -194,30 +240,35 @@ export const DataProvider = ({ children }) => {
 
   const updateEmployee = async (id, employee) => {
     try {
+      const token = localStorage.getItem('authToken');
       const response = await fetch(`http://localhost:3001/api/employees/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           nom: employee.nom,
           prenom: employee.prenom,
-          email: employee.email,
-          telephone: employee.telephone,
-          equipe: employee.equipe,
-          atelier: employee.atelier,
-          point_ramassage: employee.pointRamassage || employee.point_ramassage,
-          circuit: employee.circuit,
-          date_embauche: employee.dateEmbauche
+          email: employee.email || null,
+          telephone: employee.telephone || null,
+          equipe: employee.equipe || null,
+          atelier_id: employee.atelier_id || undefined,
+          atelier: employee.atelier || undefined,
+          point_ramassage: employee.pointRamassage || employee.point_ramassage || null,
+          circuit_affecte: employee.circuit || employee.circuit_affecte || null,
+          date_embauche: employee.dateEmbauche || employee.date_embauche || null,
+          type_contrat: employee.type_contrat || employee.typeContrat || 'CDI'
         }),
       });
       
       if (response.ok) {
         const updatedEmployee = await response.json();
-        dispatch({ type: 'UPDATE_EMPLOYEE', payload: updatedEmployee });
+        await fetchEmployees();
         return updatedEmployee;
       } else {
-        console.error('Erreur lors de la modification de l\'employé');
+        const errorData = await response.json();
+        console.error('Erreur lors de la modification de l\'employé:', errorData.error);
         return null;
       }
     } catch (error) {
@@ -228,15 +279,20 @@ export const DataProvider = ({ children }) => {
 
   const deleteEmployee = async (id) => {
     try {
+      const token = localStorage.getItem('authToken');
       const response = await fetch(`http://localhost:3001/api/employees/${id}`, {
         method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
       });
       
       if (response.ok) {
         dispatch({ type: 'DELETE_EMPLOYEE', payload: id });
         return true;
       } else {
-        console.error('Erreur lors de la suppression de l\'employé');
+        const errorData = await response.json();
+        console.error('Erreur lors de la suppression de l\'employé:', errorData.error);
         return false;
       }
     } catch (error) {
@@ -245,16 +301,46 @@ export const DataProvider = ({ children }) => {
     }
   };
 
+  // Actions pour gérer les bus
   const addBus = (bus) => {
     dispatch({ type: 'ADD_BUS', payload: bus });
   };
+
+  // Actions pour gérer les circuits
   const addCircuit = (circuit) => {
     dispatch({ type: 'ADD_CIRCUIT', payload: circuit });
   };
 
+  // Actions pour gérer les ateliers
   const addAtelier = (atelier) => {
     dispatch({ type: 'ADD_ATELIER', payload: atelier });
   };
+
+  // Récupérer les ateliers depuis l'API
+  const fetchAteliers = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('http://localhost:3001/api/ateliers', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (response.ok) {
+        const ateliers = await response.json();
+        dispatch({ type: 'SET_ATELIERS', payload: ateliers });
+        return ateliers;
+      } else {
+        console.error('Erreur lors de la récupération des ateliers');
+        return [];
+      }
+    } catch (error) {
+      console.error('Erreur de connexion à l\'API:', error);
+      return [];
+    }
+  };
+
+  // Statistiques calculées
   const getStats = () => {
     return {
       totalPlannings: state.plannings.length,
@@ -282,7 +368,8 @@ export const DataProvider = ({ children }) => {
     addCircuit,
     addAtelier,
     getStats,
-    fetchEmployees
+    fetchEmployees,
+    fetchAteliers
   };
 
   return (

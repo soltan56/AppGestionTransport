@@ -1,0 +1,182 @@
+/* Styles pour les exports CSV avec style professionnel */
+
+/* Palette de couleurs professionnelles pour les colonnes CSV */
+.csv-header-equipe {
+  background-color: #E3F2FD !important;
+  color: #1565C0 !important;
+  font-weight: bold !important;
+  border: 2px solid #2196F3 !important;
+  padding: 8px 12px !important;
+  border-radius: 6px !important;
+}
+
+.csv-header-nom-employe {
+  background-color: #F3E5F5 !important;
+  color: #7B1FA2 !important;
+  font-weight: bold !important;
+  border: 2px solid #9C27B0 !important;
+  padding: 8px 12px !important;
+  border-radius: 6px !important;
+}
+
+.csv-header-circuit {
+  background-color: #E8F5E8 !important;
+  color: #2E7D32 !important;
+  font-weight: bold !important;
+  border: 2px solid #4CAF50 !important;
+  padding: 8px 12px !important;
+  border-radius: 6px !important;
+}
+
+.csv-header-point-ramassage {
+  background-color: #FFF3E0 !important;
+  color: #EF6C00 !important;
+  font-weight: bold !important;
+  border: 2px solid #FF9800 !important;
+  padding: 8px 12px !important;
+  border-radius: 6px !important;
+}
+
+/* Styles pour les données des colonnes */
+.csv-data-equipe {
+  background-color: #F5F9FF !important;
+  color: #0D47A1 !important;
+  border: 1px solid #BBDEFB !important;
+  padding: 6px 10px !important;
+  border-radius: 4px !important;
+  font-weight: 500 !important;
+}
+
+.csv-data-nom-employe {
+  background-color: #F8F4FF !important;
+  color: #4A148C !important;
+  border: 1px solid #E1BEE7 !important;
+  padding: 6px 10px !important;
+  border-radius: 4px !important;
+  font-weight: 500 !important;
+}
+
+.csv-data-circuit {
+  background-color: #F1F8E9 !important;
+  color: #1B5E20 !important;
+  border: 1px solid #C8E6C9 !important;
+  padding: 6px 10px !important;
+  border-radius: 4px !important;
+  font-weight: 500 !important;
+}
+
+.csv-data-point-ramassage {
+  background-color: #FFF8E1 !important;
+  color: #E65100 !important;
+  border: 1px solid #FFE0B2 !important;
+  padding: 6px 10px !important;
+  border-radius: 4px !important;
+  font-weight: 500 !important;
+}
+
+/* Styles pour les en-têtes de résumé */
+.csv-summary-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+  font-weight: bold !important;
+  padding: 12px 16px !important;
+  border-radius: 8px !important;
+  margin: 16px 0 8px 0 !important;
+  text-align: center !important;
+  font-size: 14px !important;
+}
+
+/* Styles pour les métadonnées */
+.csv-metadata {
+  background-color: #FAFAFA !important;
+  border: 1px solid #E0E0E0 !important;
+  border-radius: 6px !important;
+  padding: 12px !important;
+  margin: 16px 0 !important;
+}
+
+.csv-metadata-title {
+  color: #424242 !important;
+  font-weight: bold !important;
+  font-size: 12px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  margin-bottom: 8px !important;
+}
+
+/* Styles pour les boutons d'export améliorés */
+.export-button-professional {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+  border: none !important;
+  padding: 12px 24px !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4) !important;
+  transition: all 0.3s ease !important;
+  cursor: pointer !important;
+}
+
+.export-button-professional:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6) !important;
+}
+
+.export-button-professional:active {
+  transform: translateY(0) !important;
+}
+
+/* Styles pour les icônes d'export */
+.export-icon {
+  margin-right: 8px !important;
+  font-size: 16px !important;
+}
+
+/* Styles pour les messages de succès */
+.export-success {
+  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%) !important;
+  color: white !important;
+  padding: 12px 20px !important;
+  border-radius: 6px !important;
+  margin: 16px 0 !important;
+  text-align: center !important;
+  font-weight: 500 !important;
+  box-shadow: 0 2px 10px rgba(76, 175, 80, 0.3) !important;
+}
+
+/* Styles pour les messages d'erreur */
+.export-error {
+  background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%) !important;
+  color: white !important;
+  padding: 12px 20px !important;
+  border-radius: 6px !important;
+  margin: 16px 0 !important;
+  text-align: center !important;
+  font-weight: 500 !important;
+  box-shadow: 0 2px 10px rgba(244, 67, 54, 0.3) !important;
+}
+
+/* Responsive design pour les exports */
+@media (max-width: 768px) {
+  .csv-header-equipe,
+  .csv-header-nom-employe,
+  .csv-header-circuit,
+  .csv-header-point-ramassage {
+    padding: 6px 8px !important;
+    font-size: 12px !important;
+  }
+  
+  .csv-data-equipe,
+  .csv-data-nom-employe,
+  .csv-data-circuit,
+  .csv-data-point-ramassage {
+    padding: 4px 6px !important;
+    font-size: 11px !important;
+  }
+  
+  .export-button-professional {
+    padding: 10px 20px !important;
+    font-size: 13px !important;
+  }
+} 

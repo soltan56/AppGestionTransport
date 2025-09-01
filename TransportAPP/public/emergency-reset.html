@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Déblocage d'urgence</title>
+    <style>
+        body { font-family: Arial; text-align: center; padding: 50px; }
+        .button { 
+            background: #dc2626; color: white; padding: 15px 30px; 
+            border: none; border-radius: 8px; cursor: pointer; 
+            font-size: 18px; margin: 10px;
+        }
+        .button:hover { background: #b91c1c; }
+    </style>
+</head>
+<body>
+    <h1>🚨 Déblocage d'urgence Transport APP</h1>
+    <p>Si l'application reste bloquée en chargement :</p>
+    
+    <button class="button" onclick="forceCleanup()">
+        🧹 Nettoyage forcé + Redirection
+    </button>
+    
+    <button class="button" onclick="justRedirect()">
+        🔄 Redirection directe vers login
+    </button>
+    
+    <div id="status" style="margin-top: 20px; font-weight: bold;"></div>
+    
+    <script>
+        function forceCleanup() {
+            document.getElementById('status').innerHTML = '🧹 Nettoyage en cours...';
+            
+            // Nettoyage brutal
+            localStorage.clear();
+            sessionStorage.clear();
+            
+            // Forcer les cookies aussi
+            document.cookie.split(";").forEach(function(c) { 
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+            });
+            
+            setTimeout(() => {
+                document.getElementById('status').innerHTML = '✅ Nettoyage terminé, redirection...';
+                window.location.href = '/login';
+            }, 1000);
+        }
+        
+        function justRedirect() {
+            document.getElementById('status').innerHTML = '🔄 Redirection...';
+            window.location.href = '/login';
+        }
+        
+        // Auto-nettoyage si demandé
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('auto') === 'true') {
+            forceCleanup();
+        }
+    </script>
+</body>
+</html>

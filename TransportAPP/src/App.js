@@ -6,6 +6,8 @@ import LoginForm from './components/auth/LoginForm';
 import Dashboard from './components/dashboard/Dashboard';
 import LoadingSpinner from './components/ui/LoadingSpinner';
 
+
+// Composant de protection des routes
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
   
@@ -16,6 +18,7 @@ const ProtectedRoute = ({ children }) => {
   return isAuthenticated ? children : <Navigate to="/login" replace />;
 };
 
+// Composant de redirection si déjà connecté
 const AuthRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
   
@@ -46,8 +49,15 @@ function AppContent() {
             </ProtectedRoute>
           } 
         />
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route 
+          path="/" 
+          element={
+            <AuthRoute>
+              <LoginForm />
+            </AuthRoute>
+          } 
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>
   );
@@ -57,6 +67,7 @@ function App() {
   return (
     <AuthProvider>
       <DataProvider>
+
         <Router>
           <AppContent />
         </Router>

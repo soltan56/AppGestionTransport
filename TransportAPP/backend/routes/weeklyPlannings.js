@@ -1,46 +1,59 @@
 const express = require('express');
 const router = express.Router();
 
-// Middleware simple pour vérifier l'authentification (à améliorer avec JWT)
+// Middleware d'authentification basé sur le token (mock JWT)
 const authenticate = async (req, res, next) => {
   try {
-    // Pour l'instant, on récupère le premier admin disponible
-    const [users] = await req.pool.query('SELECT id, role FROM users WHERE role = "administrateur" LIMIT 1');
-    
-    if (users.length > 0) {
-      req.user = { id: users[0].id, role: users[0].role };
-    } else {
-      // Si aucun admin, créer un utilisateur temporaire
-      req.user = { id: null, role: 'administrateur' };
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token || !token.startsWith('mock-jwt-token-')) {
+      return res.status(401).json({ error: 'Token d\'authentification requis' });
     }
-    
+    const userId = token.replace('mock-jwt-token-', '');
+    const [users] = await req.pool.query(
+      'SELECT id, name, email, role, atelier_id FROM users WHERE id = ? LIMIT 1',
+      [userId]
+    );
+    if (users.length === 0) {
+      return res.status(401).json({ error: 'Utilisateur non trouvé' });
+    }
+    req.user = users[0];
     next();
   } catch (error) {
     console.error('Erreur authentification:', error);
-    req.user = { id: null, role: 'administrateur' };
-    next();
+    res.status(500).json({ error: 'Erreur d\'authentification' });
   }
 };
 
 // GET /api/weekly-plannings - Récupérer tous les plannings hebdomadaires
 router.get('/', authenticate, async (req, res) => {
   try {
-    const { year } = req.query;
-    
+    const { year, createdBy } = req.query;
+
     let query = `
       SELECT wp.*, u.name as created_by_name 
       FROM weekly_plannings wp 
       LEFT JOIN users u ON wp.created_by = u.id
     `;
-    let params = [];
-    
+    const params = [];
+    const where = [];
+
     if (year) {
-      query += ' WHERE wp.year = ?';
+      where.push('wp.year = ?');
       params.push(year);
     }
-    
+
+    // Filtrer par créateur si admin fournit createdBy
+    if (createdBy && req.user.role === 'administrateur') {
+      where.push('wp.created_by = ?');
+      params.push(parseInt(createdBy));
+    }
+
+    if (where.length > 0) {
+      query += ` WHERE ${where.join(' AND ')}`;
+    }
+
     query += ' ORDER BY wp.year DESC, wp.week_number ASC';
-    
+
     const [rows] = await req.pool.query(query, params);
     res.json(rows);
   } catch (err) {
@@ -100,8 +113,9 @@ router.get('/:year/:week', authenticate, async (req, res) => {
   }
 });
 
+// POST /api/weekly-plannings - Créer ou mettre à jour un planning hebdomadaire (draft uniquement)
 router.post('/', authenticate, async (req, res) => {
-  const { year, week_number, assignments } = req.body;
+  const { year, week_number, assignments, targetChefId, day_assignments } = req.body;
   
   if (!year || !week_number || !assignments) {
     return res.status(400).json({ 
@@ -115,32 +129,67 @@ router.post('/', authenticate, async (req, res) => {
   try {
     await connection.beginTransaction();
     
-    // Créer ou mettre à jour le planning hebdomadaire
+    let actualCreatedBy = req.user.id || null;
+
+    // Si l'admin veut créer un planning pour un chef spécifique
+    if (targetChefId && req.user.role === 'administrateur') {
+      // Vérifier que le chef cible existe et a le bon rôle
+      const [chefCheck] = await connection.query(
+        'SELECT id FROM users WHERE id = ? AND role IN (\'chef\', \'chef_d_atelier\')',
+        [targetChefId]
+      );
+      
+      if (chefCheck.length === 0) {
+        await connection.rollback();
+        connection.release();
+        return res.status(400).json({ error: 'Chef cible introuvable ou invalide' });
+      }
+      
+      actualCreatedBy = parseInt(targetChefId);
+    }
+    
+    // Préparer JSON pour stockage (compat front)
+    const assignmentsJson = JSON.stringify(assignments || {});
+    const teamsJson = JSON.stringify(Object.keys(assignments || {}));
+    const dayAssignmentsJson = JSON.stringify(day_assignments || {});
+    
+    // Rechercher planning existant pour contrôle de statut
     const [existingPlanning] = await connection.query(`
-      SELECT id FROM weekly_plannings WHERE year = ? AND week_number = ?
-    `, [year, week_number]);
+      SELECT id, status FROM weekly_plannings WHERE year = ? AND week_number = ? AND created_by = ?
+    `, [year, week_number, actualCreatedBy]);
     
     let planningId;
     
     if (existingPlanning.length > 0) {
+      // Interdire la mise à jour si non draft
+      const status = existingPlanning[0].status || 'draft';
+      if (status !== 'draft') {
+        await connection.rollback();
+        connection.release();
+        return res.status(403).json({ error: 'Planning non modifiable (statut non-draft)' });
+      }
+      // Mettre à jour le planning existant (draft)
       planningId = existingPlanning[0].id;
       await connection.execute(`
         UPDATE weekly_plannings 
-        SET updated_at = CURRENT_TIMESTAMP, updated_by = ?
+        SET updated_at = CURRENT_TIMESTAMP, updated_by = ?, day_assignments = ?, assignments = ?, teams = ?
         WHERE id = ?
-      `, [req.user.id || null, planningId]);
+      `, [req.user.id || null, dayAssignmentsJson, assignmentsJson, teamsJson, planningId]);
       
+      // Supprimer les anciennes assignations
       await connection.execute(`
         DELETE FROM weekly_assignments WHERE weekly_planning_id = ?
       `, [planningId]);
     } else {
+      // Créer un nouveau planning (statut default draft)
       const [result] = await connection.execute(`
-        INSERT INTO weekly_plannings (year, week_number, created_by) 
-        VALUES (?, ?, ?)
-      `, [year, week_number, req.user.id || null]);
+        INSERT INTO weekly_plannings (year, week_number, created_by, day_assignments, assignments, teams) 
+        VALUES (?, ?, ?, ?, ?, ?)
+      `, [year, week_number, actualCreatedBy, dayAssignmentsJson, assignmentsJson, teamsJson]);
       planningId = result.insertId;
     }
     
+    // Ajouter les nouvelles assignations
     for (const [team, employeeIds] of Object.entries(assignments)) {
       if (Array.isArray(employeeIds) && employeeIds.length > 0) {
         for (const employeeId of employeeIds) {
@@ -154,6 +203,7 @@ router.post('/', authenticate, async (req, res) => {
     
     await connection.commit();
     
+    // Récupérer le planning créé/mis à jour
     const [rows] = await connection.query(`
       SELECT wp.*, u.name as created_by_name 
       FROM weekly_plannings wp 
@@ -175,6 +225,7 @@ router.post('/', authenticate, async (req, res) => {
   }
 });
 
+// DELETE /api/weekly-plannings/:id - Supprimer un planning hebdomadaire par ID
 router.delete('/:id', authenticate, async (req, res) => {
   const { id } = req.params;
   
@@ -183,10 +234,12 @@ router.delete('/:id', authenticate, async (req, res) => {
   try {
     await connection.beginTransaction();
     
+    // Supprimer les assignations
     await connection.execute(`
       DELETE FROM weekly_assignments WHERE weekly_planning_id = ?
     `, [id]);
     
+    // Supprimer le planning
     const [result] = await connection.execute(`
       DELETE FROM weekly_plannings WHERE id = ?
     `, [id]);
@@ -208,15 +261,17 @@ router.delete('/:id', authenticate, async (req, res) => {
   }
 });
 
+// GET /api/weekly-plannings/stats/:year - Statistiques pour une année
 router.get('/stats/:year', authenticate, async (req, res) => {
   const { year } = req.params;
   
   try {
-    
+    // Nombre de plannings créés
     const [planningCount] = await req.pool.query(`
       SELECT COUNT(*) as count FROM weekly_plannings WHERE year = ?
     `, [year]);
     
+    // Employés les plus assignés
     const [topEmployees] = await req.pool.query(`
       SELECT e.nom, e.prenom, COUNT(*) as assignments_count
       FROM weekly_assignments wa
@@ -228,6 +283,7 @@ router.get('/stats/:year', authenticate, async (req, res) => {
       LIMIT 10
     `, [year]);
     
+    // Répartition par équipe
     const [teamStats] = await req.pool.query(`
       SELECT wa.team, COUNT(*) as assignments_count
       FROM weekly_assignments wa
@@ -250,11 +306,12 @@ router.get('/stats/:year', authenticate, async (req, res) => {
   }
 });
 
+// DELETE /api/weekly-plannings/:year/:week - Supprimer un planning hebdomadaire (par année/semaine)
 router.delete('/:year/:week', authenticate, async (req, res) => {
   try {
     const { year, week } = req.params;
     
-    
+    // Vérifier si le planning existe
     const [existingPlanning] = await req.pool.query(
       'SELECT id FROM weekly_plannings WHERE year = ? AND week_number = ?',
       [year, week]
@@ -266,23 +323,23 @@ router.delete('/:year/:week', authenticate, async (req, res) => {
     
     const planningId = existingPlanning[0].id;
     
-    
+    // Démarrer une transaction
     await req.pool.query('START TRANSACTION');
     
     try {
-      
+      // Supprimer d'abord toutes les assignations
       await req.pool.query(
         'DELETE FROM weekly_assignments WHERE weekly_planning_id = ?',
         [planningId]
       );
       
-      
+      // Puis supprimer le planning
       await req.pool.query(
         'DELETE FROM weekly_plannings WHERE id = ?',
         [planningId]
       );
       
-      
+      // Valider la transaction
       await req.pool.query('COMMIT');
       
       res.json({ 
@@ -292,7 +349,7 @@ router.delete('/:year/:week', authenticate, async (req, res) => {
       });
       
     } catch (error) {
-      
+      // Annuler la transaction en cas d'erreur
       await req.pool.query('ROLLBACK');
       throw error;
     }
@@ -300,6 +357,100 @@ router.delete('/:year/:week', authenticate, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Erreur lors de la suppression du planning' });
+  }
+});
+
+// POST /api/weekly-plannings/:id/complete - Marquer un planning comme terminé
+router.post('/:id/complete', authenticate, async (req, res) => {
+  const { id } = req.params;
+  try {
+    // Charger le planning
+    let query = `SELECT id, status, created_by FROM weekly_plannings WHERE id = ?`;
+    const params = [id];
+    if (req.user.role !== 'administrateur') {
+      query += ' AND created_by = ?';
+      params.push(req.user.id);
+    }
+    const [rows] = await req.pool.query(query, params);
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Planning non trouvé ou non autorisé' });
+    }
+    const planning = rows[0];
+    if (planning.status === 'completed') {
+      return res.json({ success: true, status: 'completed' });
+    }
+    await req.pool.query(
+      `UPDATE weekly_plannings SET status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+      [planning.id]
+    );
+    res.json({ success: true, status: 'completed' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur lors de la finalisation du planning' });
+  }
+});
+
+// POST /api/weekly-plannings/:id/request-reopen - Demander la réouverture (Chef)
+router.post('/:id/request-reopen', authenticate, async (req, res) => {
+  const { id } = req.params;
+  const { reason } = req.body || {};
+  try {
+    // Charger le planning (doit appartenir au chef demandeur sauf admin)
+    let query = `SELECT id, status, created_by, reopen_requested FROM weekly_plannings WHERE id = ?`;
+    const params = [id];
+    if (req.user.role !== 'administrateur') {
+      query += ' AND created_by = ?';
+      params.push(req.user.id);
+    }
+    const [rows] = await req.pool.query(query, params);
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Planning non trouvé ou non autorisé' });
+    }
+    const planning = rows[0];
+    if (planning.status !== 'completed') {
+      return res.status(400).json({ error: 'Seuls les plannings terminés peuvent être demandés en réouverture' });
+    }
+    await req.pool.query(
+      `UPDATE weekly_plannings 
+       SET reopen_requested = 1, reopen_reason = ?, reopen_requested_by = ?, reopen_requested_at = CURRENT_TIMESTAMP 
+       WHERE id = ?`,
+      [reason || null, req.user.id, planning.id]
+    );
+    res.json({ success: true, requested: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur lors de la demande de réouverture' });
+  }
+});
+
+// POST /api/weekly-plannings/:id/approve-reopen - Approuver la réouverture (RH/Admin)
+router.post('/:id/approve-reopen', authenticate, async (req, res) => {
+  const { id } = req.params;
+  try {
+    if (!['rh', 'administrateur'].includes(req.user.role)) {
+      return res.status(403).json({ error: 'Action réservée à RH/Admin' });
+    }
+    const [rows] = await req.pool.query(
+      `SELECT id, status, reopen_requested FROM weekly_plannings WHERE id = ?`,
+      [id]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Planning non trouvé' });
+    }
+    const planning = rows[0];
+    if (planning.status !== 'completed' || planning.reopen_requested !== 1) {
+      return res.status(400).json({ error: 'Aucune demande de réouverture active' });
+    }
+    await req.pool.query(
+      `UPDATE weekly_plannings 
+       SET status = 'draft', reopen_requested = 0, reopened_by = ?, reopened_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP 
+       WHERE id = ?`,
+      [req.user.id, planning.id]
+    );
+    res.json({ success: true, status: 'draft' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur lors de l\'approbation de réouverture' });
   }
 });
 

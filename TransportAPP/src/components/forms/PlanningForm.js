@@ -20,10 +20,13 @@ const PlanningForm = ({ onClose, onSuccess }) => {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Points de ramassage extraits des employés existants
   const pointsRamassage = [...new Set(employees
     .map(emp => emp.point_ramassage || emp.pointRamassage)
     .filter(point => point && point.trim() !== '')
   )].sort();
+
+  // Ateliers extraits des employés existants
   const ateliersFromEmployees = [...new Set(employees
     .map(emp => emp.atelier)
     .filter(atelier => atelier && atelier.trim() !== '')
@@ -36,6 +39,7 @@ const PlanningForm = ({ onClose, onSuccess }) => {
       [name]: value
     }));
 
+    // Effacer l'erreur si le champ est corrigé
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -86,7 +90,7 @@ const PlanningForm = ({ onClose, onSuccess }) => {
       const planning = {
         ...formData,
         createdAt: new Date().toISOString(),
-        createdBy: 'current-user'
+        createdBy: 'current-user' // À remplacer par l'utilisateur connecté
       };
 
       addPlanning(planning);
@@ -113,6 +117,7 @@ const PlanningForm = ({ onClose, onSuccess }) => {
         exit={{ opacity: 0, scale: 0.95 }}
         className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
       >
+        {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-2xl font-bold text-gray-900">Créer un Planning</h2>
           <button
@@ -123,7 +128,9 @@ const PlanningForm = ({ onClose, onSuccess }) => {
           </button>
         </div>
 
+        {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Nom du planning */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <FiSettings className="inline mr-2" />
@@ -142,6 +149,7 @@ const PlanningForm = ({ onClose, onSuccess }) => {
             )}
           </div>
 
+          {/* Point de ramassage */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <FiMapPin className="inline mr-2" />
@@ -163,6 +171,7 @@ const PlanningForm = ({ onClose, onSuccess }) => {
             )}
           </div>
 
+          {/* Circuit */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <FiTruck className="inline mr-2" />
@@ -191,6 +200,7 @@ const PlanningForm = ({ onClose, onSuccess }) => {
             )}
           </div>
 
+          {/* Équipe */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <FiUsers className="inline mr-2" />
@@ -212,6 +222,7 @@ const PlanningForm = ({ onClose, onSuccess }) => {
             )}
           </div>
 
+          {/* Atelier */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <FiSettings className="inline mr-2" />
@@ -238,6 +249,7 @@ const PlanningForm = ({ onClose, onSuccess }) => {
             )}
           </div>
 
+          {/* Dates et heures */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -269,6 +281,7 @@ const PlanningForm = ({ onClose, onSuccess }) => {
             </div>
           </div>
 
+          {/* Boutons */}
           <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
             <button
               type="button"

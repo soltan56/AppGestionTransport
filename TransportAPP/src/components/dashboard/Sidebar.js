@@ -16,7 +16,9 @@ import {
   FiActivity,
   FiChevronLeft,
   FiChevronRight,
-  FiEdit
+  FiEdit,
+  FiTool,
+  FiShuffle
 } from 'react-icons/fi';
 
 const Sidebar = () => {
@@ -32,6 +34,7 @@ const Sidebar = () => {
 
     switch (user?.role) {
       case 'chef':
+      case 'chef_d_atelier':
         return [
           ...baseItems,
           { icon: FiCalendar, label: 'Plannings', path: '/dashboard/chef/planning' },
@@ -43,23 +46,28 @@ const Sidebar = () => {
       case 'rh':
         return [
           ...baseItems,
-          { icon: FiUserPlus, label: 'Ajouter Intérimaire', path: '/dashboard/rh/interim' },
-          { icon: FiCalendar, label: 'Consulter Planning', path: '/dashboard/rh/planning' },
+          { icon: FiUsers, label: 'Gestion Employés', path: '/dashboard/rh/employees' },
+          { icon: FiUsers, label: 'Gestion Chef', path: '/dashboard/rh/users' },
+          { icon: FiCalendar, label: 'Gestion Plannings', path: '/dashboard/rh/plannings/management' },
+          { icon: FiShuffle, label: 'Gestion Intérimaires', path: '/dashboard/rh/interim' },
           { icon: FiFileText, label: 'Rapports RH', path: '/dashboard/rh/reports' },
-          { icon: FiDollarSign, label: 'Suivi Financier', path: '/dashboard/rh/finance' }
+          { icon: FiDollarSign, label: 'Suivi Financier', path: '/dashboard/rh/finance' },
+          { icon: FiActivity, label: 'Tickets', path: '/dashboard/notifications/tickets' }
         ];
       
       case 'administrateur':
         return [
           ...baseItems,
-          { icon: FiCalendar, label: 'Plannings', path: '/dashboard/admin/planning' },
+          // Droits du chef d'atelier
+          { icon: FiCalendar, label: 'Voir Plannings', path: '/dashboard/admin/planning' },
+          { icon: FiCalendar, label: 'Créer Planning', path: '/dashboard/admin/planning-creation' },
           { icon: FiTruck, label: 'Voir Circuits', path: '/dashboard/admin/circuits' },
           { icon: FiBarChart2, label: 'Statistiques', path: '/dashboard/admin/stats' },
-          { icon: FiUsers, label: 'Gestion Bus & Employés', path: '/dashboard/admin/management' },
-          { icon: FiUsers, label: 'Gestion Utilisateurs', path: '/dashboard/admin/users' },
-          { icon: FiSettings, label: 'Groupes & Ateliers', path: '/dashboard/admin/groups' },
-          { icon: FiActivity, label: 'Audit Activités', path: '/dashboard/admin/audit' },
-          { icon: FiShield, label: 'Sécurité', path: '/dashboard/admin/security' }
+          { icon: FiUsers, label: 'Gestion Employés', path: '/dashboard/admin/management' },
+          // Droits spécifiques admin
+          { icon: FiUsers, label: 'Gestion Chef', path: '/dashboard/admin/users' },
+          { icon: FiTool, label: 'Gestion Ateliers', path: '/dashboard/admin/ateliers' },
+          { icon: FiActivity, label: 'Tickets', path: '/dashboard/notifications/tickets' }
         ];
       
       default:
@@ -86,6 +94,7 @@ const Sidebar = () => {
       transition={{ duration: 0.3 }}
       className="bg-white shadow-lg border-r border-gray-200 flex flex-col h-full"
     >
+      {/* Header de la sidebar */}
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
           {!isCollapsed && (
@@ -120,6 +129,7 @@ const Sidebar = () => {
         </div>
       </div>
 
+      {/* Navigation */}
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
         {menuItems.map((item, index) => {
           const Icon = item.icon;
@@ -162,6 +172,7 @@ const Sidebar = () => {
         })}
       </nav>
 
+      {/* Footer avec rôle utilisateur */}
       {!isCollapsed && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -171,18 +182,18 @@ const Sidebar = () => {
         >
           <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-xl">
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm ${
-              user?.role === 'chef' ? 'role-chef' :
+              (user?.role === 'chef' || user?.role === 'chef_d_atelier') ? 'role-chef' :
               user?.role === 'rh' ? 'role-rh' :
               user?.role === 'administrateur' ? 'role-admin' : 'bg-gray-500'
             }`}>
-              {user?.role === 'chef' ? '🔧' :
+              {(user?.role === 'chef' || user?.role === 'chef_d_atelier') ? '🔧' :
                user?.role === 'rh' ? '👥' :
                user?.role === 'administrateur' ? '⚙️' : '👤'}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate">{user?.name}</p>
               <p className="text-xs text-gray-500 truncate">
-                {user?.role === 'chef' ? 'Chef d\'Atelier' :
+                {(user?.role === 'chef' || user?.role === 'chef_d_atelier') ? 'Chef d\'Atelier' :
                  user?.role === 'rh' ? 'RH' :
                  user?.role === 'administrateur' ? 'Administrateur' : 'Utilisateur'}
               </p>

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-
+// GET /api/circuits - Récupérer tous les circuits
 router.get('/', async (req, res) => {
   try {
     const [rows] = await req.pool.query('SELECT * FROM circuits ORDER BY nom ASC');
@@ -12,7 +12,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-
+// GET /api/circuits/:id - Récupérer un circuit par ID
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
   try {
@@ -20,7 +20,7 @@ router.get('/:id', async (req, res) => {
     if (!rows[0]) {
       return res.status(404).json({ error: 'Circuit non trouvé' });
     }
- 
+    // Parser les points d'arrêt
     if (rows[0].points_arret) {
       try {
         rows[0].pointsArret = JSON.parse(rows[0].points_arret);
@@ -35,7 +35,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-
+// POST /api/circuits - Créer un nouveau circuit
 router.post('/', async (req, res) => {
   const {
     nom,
@@ -71,7 +71,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-
+// PUT /api/circuits/:id - Mettre à jour un circuit
 router.put('/:id', async (req, res) => {
   const { id } = req.params;
   const {
@@ -92,7 +92,7 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Circuit non trouvé' });
     }
     const [rows] = await req.pool.query('SELECT * FROM circuits WHERE id = ?', [id]);
-
+    // Parser les points d'arrêt
     if (rows[0].points_arret) {
       try {
         rows[0].pointsArret = JSON.parse(rows[0].points_arret);
@@ -107,11 +107,11 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-
+// DELETE /api/circuits/:id - Supprimer un circuit
 router.delete('/:id', async (req, res) => {
   const { id } = req.params;
   try {
- 
+    // Vérifier si le circuit est utilisé dans des plannings
     const [resultCheck] = await req.pool.query('SELECT COUNT(*) as count FROM plannings WHERE circuit = (SELECT nom FROM circuits WHERE id = ?)', [id]);
     if (resultCheck[0].count > 0) {
       return res.status(400).json({ error: `Ce circuit est utilisé dans ${resultCheck[0].count} planning(s). Impossible de le supprimer.` });
@@ -127,7 +127,7 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-
+// GET /api/circuits/stats/overview - Statistiques des circuits
 router.get('/stats/overview', async (req, res) => {
   try {
     const [rows] = await req.pool.query(`

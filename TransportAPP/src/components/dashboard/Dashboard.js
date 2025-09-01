@@ -6,7 +6,10 @@ import Header from './Header';
 import ChefDashboard from './roles/ChefDashboard';
 import RHDashboard from './roles/RHDashboard';
 import AdminDashboard from './roles/AdminDashboard';
+import NotificationsPage from '../pages/NotificationsPage';
 import { motion } from 'framer-motion';
+import TicketDetailPage from '../pages/TicketDetailPage';
+import TicketsManager from '../pages/TicketsManager';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -14,6 +17,7 @@ const Dashboard = () => {
   const getRoleComponent = () => {
     switch (user?.role) {
       case 'chef':
+      case 'chef_d_atelier':
         return <ChefDashboard />;
       case 'rh':
         return <RHDashboard />;
@@ -27,6 +31,7 @@ const Dashboard = () => {
   const getDefaultRoute = () => {
     switch (user?.role) {
       case 'chef':
+      case 'chef_d_atelier':
         return '/dashboard/chef';
       case 'rh':
         return '/dashboard/rh';
@@ -53,7 +58,11 @@ const Dashboard = () => {
           >
             <Routes>
               <Route path="/" element={<Navigate to={getDefaultRoute()} replace />} />
-              <Route path="/chef/*" element={user?.role === 'chef' ? <ChefDashboard /> : <Navigate to="/" replace />} />
+              <Route path="/notifications" element={<NotificationsPage />} />
+              <Route path="/notifications/tickets" element={(user?.role === 'rh' || user?.role === 'administrateur') ? <TicketsManager /> : <Navigate to={getDefaultRoute()} replace />} />
+              <Route path="/notifications/tickets/:id" element={(user?.role === 'rh' || user?.role === 'administrateur') ? <TicketsManager /> : <Navigate to={getDefaultRoute()} replace />} />
+              <Route path="/tickets/:id" element={(user?.role === 'rh' || user?.role === 'administrateur') ? <TicketDetailPage /> : <Navigate to={getDefaultRoute()} replace />} />
+              <Route path="/chef/*" element={(user?.role === 'chef' || user?.role === 'chef_d_atelier') ? <ChefDashboard /> : <Navigate to="/" replace />} />
               <Route path="/rh/*" element={user?.role === 'rh' ? <RHDashboard /> : <Navigate to="/" replace />} />
               <Route path="/admin/*" element={user?.role === 'administrateur' ? <AdminDashboard /> : <Navigate to="/" replace />} />
               <Route path="*" element={<Navigate to={getDefaultRoute()} replace />} />

@@ -15,14 +15,18 @@ import {
 import { useData } from '../../contexts/DataContext';
 import { exportPlanningsToExcel } from '../../services/excelExport';
 import * as XLSX from 'xlsx';
+import { useAuth } from '../../contexts/AuthContext';
 
 const CircuitManagement = () => {
-  const { circuits, addCircuit, plannings } = useData();
+  const { circuits, plannings } = useData();
+  const { token, user } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [selectedCircuit, setSelectedCircuit] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredCircuits, setFilteredCircuits] = useState([]);
+  const [loading, setLoading] = useState(false);
 
+  // Circuits prédéfinis basés sur les données fournies (sans doublons)
   const predefinedCircuits = [
     'HAY MOLAY RCHID',
     'RAHMA', 
@@ -35,31 +39,48 @@ const CircuitManagement = () => {
     'MOHAMMEDIA'
   ];
 
-  useEffect(() => {
-    let filtered = circuits;
-
-    if (searchTerm) {
-      filtered = filtered.filter(circuit =>
-        circuit.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        circuit.description?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+  const fetchCircuits = async () => {
+    try {
+      setLoading(true);
+      const resp = await fetch('http://localhost:3001/api/circuits', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        // Replace local circuits with backend list
+        // We keep it local here by filteredCircuits; page reads from filteredCircuits
+        setFilteredCircuits(data);
+      }
+    } catch (e) {
+      console.error('Erreur chargement circuits:', e);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    setFilteredCircuits(filtered);
-  }, [circuits, searchTerm]);
+  useEffect(() => { fetchCircuits(); }, [token]);
 
+  useEffect(() => {
+    if (!searchTerm) return; // filter already using backend data
+    setFilteredCircuits(prev => prev.filter(c => (c.nom||'').toLowerCase().includes(searchTerm.toLowerCase())));
+  }, [searchTerm]);
+
+  // Initialiser les circuits prédéfinis s'ils n'existent pas
   useEffect(() => {
     if (circuits.length === 0) {
       predefinedCircuits.forEach(circuitName => {
-        addCircuit({
-          nom: circuitName,
-          description: `Circuit ${circuitName}`,
-          status: 'actif',
-          pointsArret: []
-        });
+        // This part is now handled by the backend, so we can remove this auto-add
+        // addCircuit({
+        //   nom: circuitName,
+        //   description: `Circuit ${circuitName}`,
+        //   status: 'actif',
+        //   pointsArret: []
+        // });
       });
     }
-  }, [circuits, addCircuit]);
+  }, [circuits, // This dependency is now less relevant as circuits are fetched from backend
+       // addCircuit // This dependency is removed as addCircuit is no longer local
+       ]);
 
   const handleExportCircuits = () => {
     if (filteredCircuits.length === 0) {
@@ -67,6 +88,7 @@ const CircuitManagement = () => {
       return;
     }
 
+    // Créer un format d'export pour les circuits
     const circuitData = filteredCircuits.map(circuit => ({
       'Nom Circuit': circuit.nom,
       'Description': circuit.description || '',
@@ -76,17 +98,18 @@ const CircuitManagement = () => {
       'Créé le': circuit.created_at ? new Date(circuit.created_at).toLocaleDateString('fr-FR') : ''
     }));
 
+    // Utiliser le service d'export existant mais adapter pour les circuits
     try {
       const workbook = XLSX.utils.book_new();
       const worksheet = XLSX.utils.json_to_sheet(circuitData);
       
       worksheet['!cols'] = [
-        { wch: 20 },
-        { wch: 30 },
-        { wch: 10 },
-        { wch: 15 },
-        { wch: 40 },
-        { wch: 12 }
+        { wch: 20 }, // Nom Circuit
+        { wch: 30 }, // Description
+        { wch: 10 }, // Status
+        { wch: 15 }, // Nombre Plannings
+        { wch: 40 }, // Points d'Arrêt
+        { wch: 12 }  // Créé le
       ];
 
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Circuits');
@@ -106,8 +129,33 @@ const CircuitManagement = () => {
     return plannings.filter(p => p.circuit === circuitName).length;
   };
 
+  const handleDeleteCircuit = async (c) => {
+    const usage = plannings.filter(p => p.circuit === c.nom).length;
+    if (usage > 0) {
+      alert(`Ce circuit est utilisé dans ${usage} planning(s). Impossible de le supprimer.`);
+      return;
+    }
+    if (!window.confirm('Supprimer ce circuit ?')) return;
+    try {
+      const resp = await fetch(`http://localhost:3001/api/circuits/${c.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await resp.json();
+      if (resp.ok) {
+        setFilteredCircuits(list => list.filter(x => x.id !== c.id));
+      } else {
+        alert(data.error || 'Erreur suppression circuit');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Erreur réseau');
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Gestion des Circuits</h1>
@@ -141,6 +189,7 @@ const CircuitManagement = () => {
         </div>
       </div>
 
+      {/* Statistiques rapides */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="card">
           <div className="flex items-center justify-between">
@@ -195,6 +244,7 @@ const CircuitManagement = () => {
         </div>
       </div>
 
+      {/* Barre de recherche */}
       <div className="card">
         <div className="relative max-w-md">
           <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -208,6 +258,7 @@ const CircuitManagement = () => {
         </div>
       </div>
 
+      {/* Liste des circuits */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <AnimatePresence>
           {filteredCircuits.map((circuit, index) => {
@@ -283,13 +334,7 @@ const CircuitManagement = () => {
                     <FiEdit className="h-4 w-4" />
                   </button>
                   <button
-                    onClick={() => {
-                      if (usage > 0) {
-                        alert(`Ce circuit est utilisé dans ${usage} planning(s). Impossible de le supprimer.`);
-                      } else if (window.confirm('Êtes-vous sûr de vouloir supprimer ce circuit ?')) {
-                        console.log('Suppression du circuit:', circuit.id);
-                      }
-                    }}
+                    onClick={() => handleDeleteCircuit(circuit)}
                     className="p-2 text-red-600 hover:bg-red-100 rounded transition-colors"
                     title={usage > 0 ? `Utilisé dans ${usage} planning(s)` : "Supprimer"}
                     disabled={usage > 0}
@@ -327,6 +372,7 @@ const CircuitManagement = () => {
         </div>
       )}
 
+      {/* Modal de formulaire */}
       {showForm && (
         <CircuitForm
           circuit={selectedCircuit}
@@ -337,6 +383,7 @@ const CircuitManagement = () => {
           onSuccess={() => {
             setShowForm(false);
             setSelectedCircuit(null);
+            fetchCircuits(); // Refresh list after successful creation/update
           }}
         />
       )}
@@ -344,8 +391,9 @@ const CircuitManagement = () => {
   );
 };
 
+// Composant formulaire de circuit
 const CircuitForm = ({ circuit, onClose, onSuccess }) => {
-  const { addCircuit } = useData();
+  const { token } = useAuth();
   
   const [formData, setFormData] = useState({
     nom: circuit?.nom || '',
@@ -409,15 +457,29 @@ const CircuitForm = ({ circuit, onClose, onSuccess }) => {
     setIsSubmitting(true);
 
     try {
+      const method = circuit ? 'PUT' : 'POST';
+      const url = circuit ? `http://localhost:3001/api/circuits/${circuit.id}` : 'http://localhost:3001/api/circuits';
       const circuitData = {
         ...formData,
-        createdAt: new Date().toISOString()
+        // createdAt: new Date().toISOString() // This is now handled by backend
       };
 
-      addCircuit(circuitData);
-      
-      if (onSuccess) onSuccess();
-      if (onClose) onClose();
+      const resp = await fetch(url, {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(circuitData)
+      });
+
+      const data = await resp.json();
+
+      if (resp.ok) {
+        onSuccess();
+      } else {
+        alert(data.error || 'Erreur lors de la sauvegarde du circuit');
+      }
     } catch (error) {
       console.error('Erreur lors de la création du circuit:', error);
     } finally {

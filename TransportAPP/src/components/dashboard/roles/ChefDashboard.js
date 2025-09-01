@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -14,7 +14,8 @@ import {
   FiActivity,
   FiDownload,
   FiRefreshCw,
-  FiSettings
+  FiSettings,
+  FiX
 } from 'react-icons/fi';
 import {
   EmployeesByTeamChart,
@@ -28,13 +29,27 @@ import { useData } from '../../../contexts/DataContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import PlanningCreation from '../../pages/PlanningCreation';
 
+// Composants de page pour Chef d'Atelier
 const ChefHome = () => {
   const { plannings, employees, buses, circuits, getStats } = useData();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const navigate = useNavigate();
   const [recentWeeklyPlannings, setRecentWeeklyPlannings] = useState([]);
   const [activeWeeklyPlannings, setActiveWeeklyPlannings] = useState([]);
+  const [showGeneralRequest, setShowGeneralRequest] = useState(false);
+  const [generalMessage, setGeneralMessage] = useState('');
+  const [sending, setSending] = useState(false);
   
+  const chefAtelierName = useMemo(() => {
+    try {
+      const names = Array.from(new Set((employees || []).map(e => e.atelier_name || e.atelier).filter(Boolean)));
+      return names[0] || '';
+    } catch {
+      return '';
+    }
+  }, [employees]);
+
+  // Charger les plannings récents et actifs
   useEffect(() => {
     const fetchPlannings = async () => {
       try {
@@ -43,27 +58,48 @@ const ChefHome = () => {
         const currentWeek = getWeekNumber(currentDate);
         
         const response = await fetch(`http://localhost:3001/api/weekly-plannings?year=${currentYear}`, {
-          credentials: 'include'
+          credentials: 'include',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
         });
         
         if (response.ok) {
           const weeklyPlannings = await response.json();
           
+          // Enrichir avec les détails des employés pour chaque planning
           const enrichedPlannings = await Promise.all(
             weeklyPlannings.map(async (planning) => {
               try {
                 const detailResponse = await fetch(
                   `http://localhost:3001/api/weekly-plannings/${planning.year}/${planning.week_number}`,
-                  { credentials: 'include' }
+                  { 
+                    credentials: 'include',
+                    headers: {
+                      'Authorization': `Bearer ${token}`
+                    }
+                  }
                 );
                 
                 if (detailResponse.ok) {
                   const detail = await detailResponse.json();
-                  const totalEmployees = Object.values(detail.assignments || {})
+                  
+                  // S'assurer que les assignments sont parsées correctement
+                  let assignments = detail.assignments || {};
+                  if (typeof assignments === 'string') {
+                    try {
+                      assignments = JSON.parse(assignments);
+                    } catch (e) {
+                      console.warn('Erreur parsing assignments:', e);
+                      assignments = {};
+                    }
+                  }
+                  
+                  const totalEmployees = Object.values(assignments)
                     .reduce((total, teamEmployees) => total + (Array.isArray(teamEmployees) ? teamEmployees.length : 0), 0);
                   
-                  const activeTeams = Object.keys(detail.assignments || {})
-                    .filter(team => Array.isArray(detail.assignments[team]) && detail.assignments[team].length > 0);
+                  const activeTeams = Object.keys(assignments)
+                    .filter(team => Array.isArray(assignments[team]) && assignments[team].length > 0);
                   
                   return {
                     week_number: planning.week_number,
@@ -71,7 +107,7 @@ const ChefHome = () => {
                     totalEmployees,
                     activeTeams,
                     created_at: planning.created_at,
-                    assignments: detail.assignments || {}
+                    assignments: assignments
                   };
                 }
               } catch (error) {
@@ -83,8 +119,10 @@ const ChefHome = () => {
           
           const validPlannings = enrichedPlannings.filter(p => p !== null);
           
+          // Séparer récents et actifs
           setRecentWeeklyPlannings(validPlannings.slice(0, 4));
           
+          // Plannings actifs = semaine actuelle et futures
           const activePlannings = validPlannings.filter(planning => 
             planning.week_number >= currentWeek
           );
@@ -95,6 +133,7 @@ const ChefHome = () => {
       }
     };
 
+    // Fonction utilitaire pour obtenir le numéro de semaine
     const getWeekNumber = (date) => {
       const start = new Date(date.getFullYear(), 0, 1);
       const diff = date - start;
@@ -113,6 +152,7 @@ const ChefHome = () => {
     { label: 'Plannings Actifs', value: activeWeeklyPlannings.length.toString(), icon: FiCalendar, color: 'text-purple-600', bg: 'bg-purple-100' }
   ];
 
+  // Formater les plannings récents pour l'affichage
   const formatRecentPlannings = () => {
     return recentWeeklyPlannings.map(planning => ({
       action: `Planning Semaine ${planning.week_number}`,
@@ -125,14 +165,16 @@ const ChefHome = () => {
 
   return (
     <div className="space-y-8">
+      {/* En-tête */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Tableau de Bord Chef d'Atelier</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Tableau de Bord Chef d'Atelier{chefAtelierName ? ` - ${chefAtelierName}` : ''}</h1>
           <p className="text-gray-600">Gérez vos plannings, circuits et équipes</p>
         </div>
-
+        <button onClick={()=>setShowGeneralRequest(true)} className="btn-primary">Faire une demande</button>
       </div>
 
+      {/* Statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {displayStats.map((stat, index) => (
           <motion.div
@@ -155,6 +197,7 @@ const ChefHome = () => {
         ))}
       </div>
 
+      {/* Actions rapides */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <motion.div
           whileHover={{ scale: 1.02 }}
@@ -213,6 +256,7 @@ const ChefHome = () => {
         </motion.div>
       </div>
 
+      {/* Activités récentes */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="card">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Plannings Récents</h3>
@@ -317,13 +361,49 @@ const ChefHome = () => {
         </div>
       </div>
 
+      {/* Modal demande générale */}
+      {showGeneralRequest && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <motion.div initial={{opacity:0,scale:0.95}} animate={{opacity:1,scale:1}} exit={{opacity:0,scale:0.95}} className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
+            <div className="p-4 border-b flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Faire une demande</h3>
+              <button onClick={()=>setShowGeneralRequest(false)} className="p-2 hover:bg-gray-100 rounded"><FiX className="h-5 w-5 text-gray-500"/></button>
+            </div>
+            <div className="p-4">
+              <textarea value={generalMessage} onChange={(e)=>setGeneralMessage(e.target.value)} className="input-field w-full h-40" placeholder="Votre demande pour l'Admin/RH..." />
+            </div>
+            <div className="p-4 border-t flex items-center justify-end space-x-2">
+              <button onClick={()=>setShowGeneralRequest(false)} className="btn-secondary">Annuler</button>
+              <button disabled={sending || !generalMessage.trim()} onClick={async()=>{
+                try{
+                  setSending(true);
+                  const resp = await fetch('http://localhost:3001/api/requests', {method:'POST',credentials:'include',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},body: JSON.stringify({ type:'general', message: generalMessage, target_role:'administrateur' })});
+                  if(!resp.ok){ const t=await resp.text(); return alert(`Erreur: ${t}`);} 
+                  alert('✅ Demande envoyée'); setShowGeneralRequest(false); setGeneralMessage('');
+                }catch(e){ alert('Erreur envoi demande'); } finally{ setSending(false);} 
+              }} className={`btn-primary ${sending?'opacity-70 cursor-not-allowed':''}`}>{sending?'Envoi...':'Envoyer'}</button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
 
     </div>
   );
 };
 
 const PlanningPage = () => {
-  return <PlanningCreation />;
+  const PlanningCreation = React.lazy(() => import('../../pages/PlanningCreation'));
+  
+  return (
+    <React.Suspense fallback={
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary-600 border-t-transparent"></div>
+      </div>
+    }>
+      <PlanningCreation />
+    </React.Suspense>
+  );
 };
 
 const CircuitsPage = () => {
@@ -343,30 +423,35 @@ const CircuitsPage = () => {
 const StatsPage = () => {
   const { employees, circuits, plannings } = useData();
 
+  // Calculs des statistiques réelles
   const realStats = {
+    // Statistiques des employés par équipe
     equipeStats: {
       matin: employees.filter(e => e.equipe === 'MATIN').length,
       soir: employees.filter(e => e.equipe === 'SOIR').length,
       na: employees.filter(e => e.equipe === 'N/A').length,
     },
     
+    // Statistiques des circuits
     circuitStats: circuits.length > 0 ? {
       total: circuits.length,
       utilises: [...new Set(employees.map(e => e.circuit).filter(c => c))].length,
       tauxUtilisation: Math.round((([...new Set(employees.map(e => e.circuit).filter(c => c))].length) / circuits.length) * 100)
     } : { total: 9, utilises: 8, tauxUtilisation: 89 },
     
+    // Statistiques des ateliers
     atelierStats: [...new Set(employees.map(e => e.atelier).filter(a => a))].reduce((acc, atelier) => {
       acc[atelier] = employees.filter(e => e.atelier === atelier).length;
       return acc;
     }, {}),
     
-
+    // Points de ramassage les plus utilisés
     pointsRamassageStats: [...new Set(employees.map(e => e.point_ramassage).filter(p => p))].map(point => ({
       point,
       count: employees.filter(e => e.point_ramassage === point).length
     })).sort((a, b) => b.count - a.count).slice(0, 5),
     
+    // Répartition par circuit
     circuitUtilisation: [...new Set(employees.map(e => e.circuit).filter(c => c))].map(circuit => ({
       circuit,
       count: employees.filter(e => e.circuit === circuit).length
@@ -392,6 +477,7 @@ const StatsPage = () => {
         </div>
       </div>
 
+      {/* Statistiques principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="card">
           <div className="flex items-center justify-between">
@@ -442,12 +528,13 @@ const StatsPage = () => {
         </div>
       </div>
 
+      {/* Graphiques détaillés */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <StatsContainer title="Effectifs par Équipe">
           <EmployeesByTeamChart data={[
             realStats.equipeStats.matin,
             realStats.equipeStats.soir,
-            0,
+            0, // Équipe Nuit (non utilisée)
             realStats.equipeStats.na
           ]} />
         </StatsContainer>
@@ -524,6 +611,7 @@ const StatsPage = () => {
         </div>
       </div>
 
+      {/* Métriques clés calculées */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="card text-center">
           <div className="text-3xl font-bold text-blue-600 mb-2">{realStats.circuitStats.tauxUtilisation}%</div>

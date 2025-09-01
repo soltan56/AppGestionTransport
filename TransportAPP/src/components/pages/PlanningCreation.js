@@ -17,15 +17,18 @@ import {
   FiPlus,
   FiLock,
   FiEdit,
-  FiTrash2
+  FiTrash2,
+  FiDownload,
+  FiCheck
 } from 'react-icons/fi';
 import WeekPlanningModal from './WeekPlanningModal';
 
 const PlanningCreation = () => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const { employees, circuits, ateliers } = useData();
   const navigate = useNavigate();
   
+  // Debug initial (supprimé pour plus de clarté)
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedWeek, setSelectedWeek] = useState(null);
@@ -34,12 +37,30 @@ const PlanningCreation = () => {
   const [hoveredWeek, setHoveredWeek] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saveProgress, setSaveProgress] = useState({ current: 0, total: 0, isVisible: false });
+  
+  // États pour la sélection de chef (admin seulement)
+  const [chefs, setChefs] = useState([]);
+  const [selectedChef, setSelectedChef] = useState(null);
+  const [loadingChefs, setLoadingChefs] = useState(false);
+  
+  // États pour les employés du chef sélectionné
+  const [chefEmployees, setChefEmployees] = useState([]);
+  const [loadingChefEmployees, setLoadingChefEmployees] = useState(false);
 
+  // Fonction pour charger les plannings existants
   const loadExistingPlannings = async (year = selectedYear) => {
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:3001/api/weekly-plannings?year=${year}`, {
-        credentials: 'include'
+      
+      // Récupérer la liste des semaines supprimées pour éviter de les recharger
+      const deletedWeeks = JSON.parse(localStorage.getItem('deletedWeeks') || '{}');
+      
+      const createdByParam = user?.role === 'administrateur' && selectedChef ? `&createdBy=${selectedChef}` : '';
+      const response = await fetch(`http://localhost:3001/api/weekly-plannings?year=${year}${createdByParam}`, {
+        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
       
       if (response.ok) {
@@ -50,15 +71,72 @@ const PlanningCreation = () => {
           const planning = existingPlannings[i];
           const weekKey = `${planning.year}-W${planning.week_number}`;
           
+          // Vérifier si cette semaine a été supprimée récemment
+          if (deletedWeeks[weekKey]) {
+            const deletionTime = deletedWeeks[weekKey];
+            const now = Date.now();
+            const timeSinceDeletion = now - deletionTime;
+            
+            // Si la suppression date de moins de 5 minutes, on ignore cette semaine
+            if (timeSinceDeletion < 5 * 60 * 1000) {
+              console.log(`🚫 Semaine ${planning.week_number} ignorée (supprimée récemment)`);
+              continue;
+            } else {
+              // Nettoyer les anciennes entrées supprimées (plus de 5 minutes)
+              delete deletedWeeks[weekKey];
+              localStorage.setItem('deletedWeeks', JSON.stringify(deletedWeeks));
+            }
+          }
+          
           try {
+            // Charger les détails avec assignations (ajout createdBy pour admin)
+            const createdByQuery = (user?.role === 'administrateur' && selectedChef) ? `?createdBy=${selectedChef}` : '';
             const detailResponse = await fetch(
-              `http://localhost:3001/api/weekly-plannings/${planning.year}/${planning.week_number}`,
-              { credentials: 'include' }
+              `http://localhost:3001/api/weekly-plannings/${planning.year}/${planning.week_number}${createdByQuery}`,
+              { 
+                credentials: 'include',
+                headers: {
+                  'Authorization': `Bearer ${token}`
+                }
+              }
             );
             
             if (detailResponse.ok) {
               const detail = await detailResponse.json();
-              planningsMap[weekKey] = detail.assignments || {};
+              // Assurer que les assignments sont parsées si c'est une chaîne JSON
+              let assignments = detail.assignments || {};
+              if (typeof assignments === 'string') {
+                try {
+                  assignments = JSON.parse(assignments);
+                } catch (e) {
+                  console.warn(`Erreur parsing assignments pour semaine ${planning.week_number}:`, e);
+                  assignments = {};
+                }
+              }
+              // Normaliser: convertir éventuels objets employés en IDs
+              const normalized = {};
+              Object.entries(assignments).forEach(([team, arr]) => {
+                if (Array.isArray(arr)) {
+                  normalized[team] = arr.map(v => (v && typeof v === 'object' ? v.id : v)).filter(v => Number.isFinite(parseInt(v)) ).map(v => parseInt(v));
+                }
+              });
+              // Injecter day_assignments (s'il existe en base) pour le modal
+              if (detail.day_assignments) {
+                try {
+                  const days = typeof detail.day_assignments === 'string' ? JSON.parse(detail.day_assignments) : detail.day_assignments;
+                  normalized._dayAssignments = days || {};
+                } catch (e) {
+                  console.warn('Erreur parsing day_assignments:', e);
+                }
+              }
+              // Ajouter métadonnées status/id
+              normalized._status = detail.status || planning.status || 'draft';
+              normalized._id = detail.id || planning.id;
+              normalized._isConsolidated = !!detail.is_consolidated;
+              normalized._reopenRequested = !!detail.reopen_requested;
+
+              planningsMap[weekKey] = normalized;
+              console.log(`📊 Assignments (normalisés) chargées pour semaine ${planning.week_number}:`, normalized);
             } else if (detailResponse.status === 429) {
               console.warn(`🔄 Erreur 429 pour semaine ${planning.week_number}, on passe...`);
             }
@@ -66,9 +144,9 @@ const PlanningCreation = () => {
             console.error(`Erreur chargement semaine ${planning.week_number}:`, error);
           }
 
-         
+          // Délai entre chaque requête pour éviter le spam
           if (i < existingPlannings.length - 1) {
-            await delay(200); 
+            await delay(200); // 200ms entre chaque requête
           }
         }
         
@@ -81,30 +159,108 @@ const PlanningCreation = () => {
     }
   };
 
+  // Charger les chefs si l'utilisateur est admin
+  const loadChefs = async () => {
+    if (user?.role !== 'administrateur') return;
+    
+    try {
+      setLoadingChefs(true);
+      const response = await fetch('http://localhost:3001/api/chefs', {
+        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const chefsData = await response.json();
+        console.log('🧑‍💼 Chefs chargés avec compteurs:', chefsData);
+        setChefs(chefsData);
+      } else {
+        console.error('❌ Erreur réponse API chefs:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('❌ Détails erreur:', errorText);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des chefs:', error);
+    } finally {
+      setLoadingChefs(false);
+    }
+  };
+
+  // Fonction pour rafraîchir les données des chefs
+  const refreshChefs = async () => {
+    console.log('🔄 Rafraîchissement des données des chefs...');
+    await loadChefs();
+  };
+
+  // Fonction pour nettoyer les anciennes entrées supprimées
+  const cleanupDeletedWeeks = () => {
+    try {
+      const deletedWeeks = JSON.parse(localStorage.getItem('deletedWeeks') || '{}');
+      const now = Date.now();
+      const fiveMinutesAgo = now - (5 * 60 * 1000);
+      
+      let hasChanges = false;
+      Object.keys(deletedWeeks).forEach(weekKey => {
+        if (deletedWeeks[weekKey] < fiveMinutesAgo) {
+          delete deletedWeeks[weekKey];
+          hasChanges = true;
+        }
+      });
+      
+      if (hasChanges) {
+        localStorage.setItem('deletedWeeks', JSON.stringify(deletedWeeks));
+        console.log('🧹 Nettoyage des anciennes entrées supprimées effectué');
+      }
+    } catch (error) {
+      console.warn('⚠️ Erreur lors du nettoyage des semaines supprimées:', error);
+    }
+  };
+
+  // Charger les plannings existants pour l'année sélectionnée
   useEffect(() => {
+    cleanupDeletedWeeks(); // Nettoyer avant de charger
     loadExistingPlannings();
   }, [selectedYear]);
+
+  // Charger les chefs si admin
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        // L'utilisateur est revenu sur la page, recharger les données
-        loadExistingPlannings();
+    if (user?.role === 'administrateur') {
+      loadChefs();
+    }
+  }, [user, token]);
+
+  // Recharger les plannings quand le chef sélectionné change (admin)
+  useEffect(() => {
+    if (user?.role === 'administrateur') {
+      // Réinitialiser l'état local pour éviter l'affichage d'un ancien chef
+      setWeeklyPlannings({});
+      setSelectedWeek(null);
+      // Recharger les plannings pour ce chef
+      loadExistingPlannings(selectedYear);
+    }
+  }, [selectedChef]);
+
+  // Rafraîchir les données quand on revient sur la page (pour capturer les changements depuis d'autres pages)
+  useEffect(() => {
+    const handleFocus = () => {
+      if (user?.role === 'administrateur' && document.visibilityState === 'visible') {
+        console.log('🔄 Page redevenue visible - rafraîchissement des chefs...');
+        loadChefs();
       }
     };
 
-    const handleFocus = () => {
-      loadExistingPlannings();
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('visibilitychange', handleFocus);
     window.addEventListener('focus', handleFocus);
 
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('visibilitychange', handleFocus);
       window.removeEventListener('focus', handleFocus);
     };
-  }, [selectedYear]);
+  }, [user]);
 
+  // Générer les 53 semaines de l'année
   const generateWeeks = (year) => {
     const weeks = [];
     for (let week = 1; week <= 53; week++) {
@@ -123,6 +279,7 @@ const PlanningCreation = () => {
     return weeks;
   };
 
+  // Obtenir la date du lundi d'une semaine donnée
   const getDateOfWeek = (week, year) => {
     const date = new Date(year, 0, 1 + (week - 1) * 7);
     const day = date.getDay();
@@ -130,6 +287,7 @@ const PlanningCreation = () => {
     return new Date(date.setDate(diff));
   };
 
+  // Vérifier si c'est la semaine actuelle
   const isCurrentWeek = (week, year) => {
     const now = new Date();
     const currentYear = now.getFullYear();
@@ -137,6 +295,7 @@ const PlanningCreation = () => {
     return year === currentYear && week === currentWeek;
   };
 
+  // Vérifier si une semaine est dans le passé
   const isPastWeek = (week, year) => {
     const now = new Date();
     const currentYear = now.getFullYear();
@@ -147,9 +306,12 @@ const PlanningCreation = () => {
     return false;
   };
 
+  // Vérifier si une semaine est modifiable
   const isWeekEditable = (week, year) => {
     return !isPastWeek(week, year);
   };
+
+  // Obtenir le numéro de semaine d'une date
   const getWeekNumber = (date) => {
     const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
     const dayNum = d.getUTCDay() || 7;
@@ -160,36 +322,95 @@ const PlanningCreation = () => {
 
   const weeks = generateWeeks(selectedYear);
 
+  // Ouvrir le modal pour une semaine (création ou modification)
   const handleWeekClick = (week) => {
     const weekKey = `${selectedYear}-W${week.number}`;
     const hasExistingPlanning = weeklyPlannings[weekKey] && Object.keys(weeklyPlannings[weekKey]).length > 0;
     
-    
-    
-    // 2. OU il existe déjà un planning (modification)
-    if (!isWeekEditable(week.number, selectedYear) && !hasExistingPlanning) {
-      return; // Ne pas ouvrir pour les semaines passées sans planning
-    }
-    
-    setSelectedWeek(week);
-    setShowModal(true);
+      // Vérifier qu'un chef est sélectionné si l'utilisateur est admin
+  if (user?.role === 'administrateur' && !selectedChef) {
+    alert('⚠️ Veuillez d\'abord sélectionner un chef dans le menu déroulant en haut à droite.');
+    return;
+  }
+
+  // Permettre l'ouverture si :
+  // 1. La semaine est modifiable (future/actuelle)
+  // 2. OU il existe déjà un planning (modification)
+  if (!isWeekEditable(week.number, selectedYear) && !hasExistingPlanning) {
+    return; // Ne pas ouvrir pour les semaines passées sans planning
+  }
+  
+  setSelectedWeek(week);
+  setShowModal(true);
   };
 
+  // Fonction pour charger les employés d'un chef spécifique
+  const loadChefEmployees = async (chefId) => {
+    if (!chefId || user?.role !== 'administrateur') {
+      setChefEmployees([]);
+      return;
+    }
+    
+    try {
+      setLoadingChefEmployees(true);
+      const response = await fetch(`http://localhost:3001/api/chefs/${chefId}/employees`, {
+        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log(`👥 Employés du chef ${data.chef.name}: ${data.totalCount}`);
+        setChefEmployees(data.employees || []);
+      } else {
+        console.error('❌ Erreur réponse API employés du chef:', response.status);
+        setChefEmployees([]);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des employés du chef:', error);
+      setChefEmployees([]);
+    } finally {
+      setLoadingChefEmployees(false);
+    }
+  };
+
+  // Effet pour charger les employés quand un chef est sélectionné
+  useEffect(() => {
+    if (selectedChef) {
+      loadChefEmployees(selectedChef);
+    } else {
+      setChefEmployees([]);
+    }
+  }, [selectedChef, token]);
+
+  // Obtenir les employés selon le rôle et le chef sélectionné
   const getAvailableEmployees = () => {
     if (user?.role === 'administrateur') {
-      return employees; 
-    } else if (user?.role === 'chef') {
-      return employees.filter(emp => 
-        emp.atelier_chef_id === user.id || emp.atelier_chef_id === null
-      );
+      // Si un chef est sélectionné, retourner ses employés
+      if (selectedChef && chefEmployees.length > 0) {
+        console.log(`👥 Employés du chef sélectionné (ID: ${selectedChef}):`, chefEmployees.length);
+        return chefEmployees;
+      }
+      // Sinon, retourner tous les employés du contexte
+      console.log('👥 Admin - tous les employés:', employees.length);
+      return employees;
+    } else if (user?.role === 'chef' || user?.role === 'chef_d_atelier') {
+      // Pour les chefs d'atelier, la liste employees est déjà filtrée côté backend
+      // pour ne contenir que les employés de leur atelier. On la renvoie telle quelle.
+      return employees;
     }
     return [];
   };
 
+  // Vérifier si une semaine a des assignations
   const hasAssignments = (weekNumber) => {
     const weekKey = `${selectedYear}-W${weekNumber}`;
     return weeklyPlannings[weekKey] && Object.keys(weeklyPlannings[weekKey]).length > 0;
   };
+
+  // Obtenir le nombre total d'employés assignés pour une semaine
   const getWeekAssignmentsCount = (weekNumber) => {
     const weekKey = `${selectedYear}-W${weekNumber}`;
     const weekPlanning = weeklyPlannings[weekKey];
@@ -200,10 +421,11 @@ const PlanningCreation = () => {
     }, 0);
   };
 
+  // Mettre à jour les assignations d'une semaine (local seulement)
   const handleWeekPlanningUpdate = (weekNumber, assignments) => {
     const weekKey = `${selectedYear}-W${weekNumber}`;
     
-    
+    // Mettre à jour l'état local uniquement
     setWeeklyPlannings(prev => ({
       ...prev,
       [weekKey]: assignments
@@ -212,37 +434,81 @@ const PlanningCreation = () => {
     console.log(`📝 Planning semaine ${weekNumber} modifié localement (utiliser "Sauvegarder Tout" pour persister)`);
   };
 
+  // Supprimer un planning localement et en base si il existe
   const handleDeletePlanning = async (weekNumber) => {
     const weekKey = `${selectedYear}-W${weekNumber}`;
     
     try {
-      
-      const response = await fetch(`http://localhost:3001/api/weekly-plannings/${selectedYear}/${weekNumber}`, {
+      // 1) Trouver l'ID du planning à supprimer (selon le rôle)
+      const tokenLocal = localStorage.getItem('authToken');
+      const createdByParam = (user?.role === 'administrateur' && selectedChef) ? `&createdBy=${selectedChef}` : '';
+      const listResponse = await fetch(`http://localhost:3001/api/weekly-plannings?year=${selectedYear}${createdByParam}`, {
+        credentials: 'include',
+        headers: { 'Authorization': `Bearer ${tokenLocal}` }
+      });
+      if (!listResponse.ok) {
+        const errTxt = await listResponse.text();
+        alert(`❌ Impossible de récupérer les plannings: ${errTxt}`);
+        return;
+      }
+      const list = await listResponse.json();
+      const currentWeekNumber = weekNumber;
+      const planningToDelete = list.find(p => 
+        p.week_number === currentWeekNumber && 
+        p.year === selectedYear &&
+        (user?.role === 'administrateur' ? p.created_by === parseInt(selectedChef) : p.created_by === user.id) &&
+        !p.is_consolidated
+      );
+
+      // Si pas de planning en base, on nettoie juste localement
+      if (!planningToDelete) {
+        setWeeklyPlannings(prev => {
+          const updated = { ...prev };
+          delete updated[weekKey];
+          return updated;
+        });
+        console.log(`📝 Planning semaine ${weekNumber} non trouvé en base (suppression locale)`);
+        return;
+      }
+
+      // 2) Supprimer en base par ID (sécurisé)
+      const response = await fetch(`http://localhost:3001/api/weekly-plannings/id/${planningToDelete.id}`, {
         method: 'DELETE',
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
 
-      if (response.ok) {
-        console.log(`🗑️ Planning semaine ${weekNumber} supprimé de la base de données`);
-      } else if (response.status === 404) {
-        console.log(`📝 Planning semaine ${weekNumber} n'existait que localement`);
+      if (response.ok || response.status === 404) {
+        // 3) Supprimer localement uniquement si succès API (ou déjà inexistant)
+        setWeeklyPlannings(prev => {
+          const updated = { ...prev };
+          delete updated[weekKey];
+          return updated;
+        });
+        console.log(`🗑️ Planning semaine ${weekNumber} supprimé localement et en base`);
+        
+        // 4) IMPORTANT: Empêcher le rechargement automatique qui ferait réapparaître le planning
+        // On marque cette semaine comme "supprimée" pour éviter qu'elle soit rechargée
+        const deletedWeeks = JSON.parse(localStorage.getItem('deletedWeeks') || '{}');
+        deletedWeeks[weekKey] = Date.now();
+        localStorage.setItem('deletedWeeks', JSON.stringify(deletedWeeks));
+        
       } else {
-        console.warn(`⚠️ Erreur suppression base: ${response.status}`);
+        const errorText = await response.text();
+        console.warn(`⚠️ Erreur suppression base (${response.status}): ${errorText}`);
+        alert(`❌ Suppression échouée (code ${response.status}). Le planning n'a pas été retiré localement.`);
+        return;
       }
     } catch (error) {
       console.warn(`⚠️ Erreur API suppression:`, error);
+      alert('❌ Erreur réseau lors de la suppression. Le planning n\'a pas été retiré localement.');
+      return;
     }
-    
-    
-    setWeeklyPlannings(prev => {
-      const updated = { ...prev };
-      delete updated[weekKey];
-      return updated;
-    });
-
-    console.log(`🗑️ Planning semaine ${weekNumber} supprimé localement`);
   };
 
+  // Effacer tous les plannings locaux
   const handleClearAllPlannings = () => {
     if (window.confirm('⚠️ Êtes-vous sûr de vouloir effacer tous les plannings locaux ?\n\nCette action supprimera toutes les modifications non sauvegardées.')) {
       setWeeklyPlannings({});
@@ -250,8 +516,10 @@ const PlanningCreation = () => {
     }
   };
 
+  // Fonction utilitaire pour attendre
   const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+  // Fonction utilitaire pour retry en cas d'erreur 429
   const saveWithRetry = async (url, data, maxRetries = 3) => {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -259,6 +527,7 @@ const PlanningCreation = () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
           },
           credentials: 'include',
           body: JSON.stringify(data)
@@ -282,7 +551,85 @@ const PlanningCreation = () => {
     }
   };
 
+  // Nouvelle fonction: Terminer le planning
+  const handleCompletePlanning = async () => {
+    if (!selectedWeek) {
+      alert('⚠️ Veuillez sélectionner une semaine pour terminer le planning.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Récupérer l'ID du planning de cette semaine pour ce chef
+      const token = localStorage.getItem('authToken');
+      const createdByParam = (user?.role === 'administrateur' && selectedChef) ? `&createdBy=${selectedChef}` : '';
+      const planningsResponse = await fetch(`http://localhost:3001/api/weekly-plannings?year=${selectedYear}${createdByParam}`, {
+        credentials: 'include',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (!planningsResponse.ok) {
+        throw new Error('Erreur lors de la récupération des plannings');
+      }
+      
+      const allPlannings = await planningsResponse.json();
+      const currentWeekNumber = selectedWeek?.number;
+      
+      // Trouver le planning de ce chef pour cette semaine
+      const currentUserPlanning = allPlannings.find(p => 
+        p.week_number === currentWeekNumber && 
+        p.year === selectedYear && 
+        (user?.role === 'administrateur' ? p.created_by === parseInt(selectedChef) : p.created_by === user.id) &&
+        !p.is_consolidated
+      );
+      
+      if (!currentUserPlanning) {
+        alert('❌ Aucun planning trouvé pour cette semaine. Veuillez d\'abord sauvegarder votre planning.');
+        return;
+      }
+      
+      if (currentUserPlanning.status === 'completed') {
+        alert('✅ Ce planning est déjà marqué comme terminé !');
+        return;
+      }
+      
+      // Marquer le planning comme terminé (nouvelle route)
+      const updateResponse = await fetch(`http://localhost:3001/api/weekly-plannings/${currentUserPlanning.id}/complete`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!updateResponse.ok) {
+        const errorText = await updateResponse.text();
+        throw new Error(`Erreur lors de la finalisation: ${errorText}`);
+      }
+      
+      alert('✅ Planning terminé avec succès ! Il sera pris en compte pour la consolidation automatique.');
+      
+      // Rafraîchir la page
+      window.location.reload();
+      
+    } catch (error) {
+      console.error('❌ Erreur lors de la finalisation du planning:', error);
+      alert(`❌ Erreur lors de la finalisation: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Sauvegarder tous les plannings avec délais
   const handleSaveAll = async () => {
+    // Vérifier qu'un chef est sélectionné si l'utilisateur est admin
+    if (user?.role === 'administrateur' && !selectedChef) {
+      alert('⚠️ Veuillez sélectionner un chef pour créer le planning.');
+      return;
+    }
+
     try {
       setLoading(true);
       let savedCount = 0;
@@ -291,6 +638,7 @@ const PlanningCreation = () => {
       const planningsToSave = Object.entries(weeklyPlannings)
         .filter(([, assignments]) => Object.keys(assignments).length > 0);
 
+      // Initialiser le progrès
       setSaveProgress({ current: 0, total: planningsToSave.length, isVisible: true });
       console.log(`🚀 Sauvegarde de ${planningsToSave.length} planning(s)...`);
 
@@ -301,12 +649,30 @@ const PlanningCreation = () => {
 
         try {
           console.log(`📅 Sauvegarde semaine ${week_number} (${i + 1}/${planningsToSave.length})...`);
+          
+          // Extraire les équipes des assignations (calcul déplacé plus bas)
+          // const teams (deprecated)
+          
+          // Extraire day_assignments depuis assignments._dayAssignments si présent
+          const day_assignments = assignments._dayAssignments || {};
+          // Préparer payload en retirant _dayAssignments
+          const { _dayAssignments, ...assignmentsPayload } = assignments;
 
-          const response = await saveWithRetry('http://localhost:3001/api/weekly-plannings', {
+          // Corriger: teams = clés des assignments (sans _dayAssignments)
+          const teams = Object.keys(assignmentsPayload).filter(k => k !== '_dayAssignments');
+
+          const planningData = {
             year: parseInt(year),
             week_number,
-            assignments
-          });
+            teams,
+            assignments: assignmentsPayload,
+            day_assignments,
+            ...(selectedChef && { targetChefId: parseInt(selectedChef) })
+          };
+          
+          console.log(`📊 Données à sauvegarder pour semaine ${week_number}:`, planningData);
+
+          const response = await saveWithRetry('http://localhost:3001/api/weekly-plannings', planningData);
 
           if (response && response.ok) {
             savedCount++;
@@ -317,37 +683,86 @@ const PlanningCreation = () => {
             console.error(`❌ Erreur semaine ${week_number}:`, errorText);
           }
 
+          // Mettre à jour le progrès
           setSaveProgress(prev => ({ ...prev, current: i + 1 }));
         } catch (error) {
           errors++;
           console.error(`❌ Erreur semaine ${week_number}:`, error);
+          // Mettre à jour le progrès même en cas d'erreur
           setSaveProgress(prev => ({ ...prev, current: i + 1 }));
         }
 
+        // Délai entre chaque requête pour éviter le spam
         if (i < planningsToSave.length - 1) {
-          await delay(1000); 
+          await delay(1000); // 1s entre chaque requête
         }
       }
 
       if (errors === 0) {
         alert(`✅ ${savedCount} planning(s) sauvegardé(s) avec succès !`);
+        // Recharger les données depuis la base pour synchroniser l'affichage
+        console.log('🔄 Rechargement des plannings depuis la base...');
+        await loadExistingPlannings();
       } else {
         alert(`⚠️ ${savedCount} planning(s) sauvegardé(s), ${errors} erreur(s) rencontrée(s)`);
+        // Même en cas d'erreurs partielles, recharger pour voir ce qui a été sauvé
+        console.log('🔄 Rechargement des plannings depuis la base...');
+        await loadExistingPlannings();
       }
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
       alert('❌ Erreur lors de la sauvegarde');
     } finally {
       setLoading(false);
+      // Masquer la notification de progression après un délai
       setTimeout(() => {
         setSaveProgress({ current: 0, total: 0, isVisible: false });
       }, 2000);
     }
   };
 
+  // Export CSV des plannings
+  const handleExportCSV = async () => {
+    try {
+      if (!token) {
+        alert('Erreur: Token d\'authentification manquant');
+        return;
+      }
+
+      const response = await fetch('http://localhost:3001/api/plannings/export/csv', {
+        credentials: 'include',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `plannings_export_${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        alert('✅ Export CSV téléchargé avec succès !');
+      } else {
+        const errorData = await response.text();
+        console.error('Erreur réponse:', errorData);
+        alert('Erreur lors de l\'export CSV');
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'export:', error);
+      alert('Erreur lors de l\'export CSV');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
-      
+      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -369,7 +784,7 @@ const PlanningCreation = () => {
           </div>
 
           <div className="flex items-center space-x-4">
-            
+            {/* Sélecteur d'année (limitée aux années actuelles et futures) */}
             <div className="flex items-center space-x-2">
               <motion.button
                 whileHover={{ scale: 1.05 }}
@@ -399,9 +814,62 @@ const PlanningCreation = () => {
               </motion.button>
             </div>
 
+            {/* Sélecteur de chef (admin seulement) */}
+            {user?.role === 'administrateur' && (
+              <div className="flex items-center space-x-2">
+                <label className="text-sm font-medium text-gray-700">Créer pour le chef:</label>
+                <select
+                  value={selectedChef || ''}
+                  onChange={(e) => setSelectedChef(e.target.value || null)}
+                  disabled={loadingChefs}
+                  className={`min-w-[250px] bg-white border rounded-lg px-3 py-2 text-sm shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    !selectedChef ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  }`}
+                  required
+                >
+                  <option value="">-- Sélectionner un chef --</option>
+                  {chefs.map(chef => (
+                    <option key={chef.id} value={chef.id}>
+                      {chef.name} ({chef.employee_count || 0} employés)
+                    </option>
+                  ))}
+                </select>
+                
+                {/* Bouton de rafraîchissement */}
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={refreshChefs}
+                  disabled={loadingChefs}
+                  className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-lg shadow-md hover:shadow-lg transition-all"
+                  title="Rafraîchir les compteurs d'employés"
+                >
+                  <FiRefreshCw className={`h-4 w-4 ${loadingChefs ? 'animate-spin' : ''}`} />
+                </motion.button>
+                
+                {!selectedChef && (
+                  <div className="flex items-center text-red-600 text-xs">
+                    <span>⚠️ Sélection obligatoire</span>
+                  </div>
+                )}
+                {loadingChefs && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                )}
+              </div>
+            )}
 
+            {/* Bouton Export CSV */}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleExportCSV}
+              className="flex items-center space-x-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all"
+            >
+              <FiDownload className="h-4 w-4" />
+              <span>Export CSV</span>
+            </motion.button>
 
-            
+            {/* Bouton de sauvegarde */}
             <motion.button
               whileHover={!loading ? { scale: 1.05 } : {}}
               whileTap={!loading ? { scale: 0.95 } : {}}
@@ -422,11 +890,122 @@ const PlanningCreation = () => {
               )}
               <span>{loading ? 'Sauvegarde en cours...' : 'Sauvegarder Tout'}</span>
             </motion.button>
+
+            {/* Nouveau bouton: Terminer le planning */}
+            <motion.button
+              whileHover={!loading ? { scale: 1.05 } : {}}
+              whileTap={!loading ? { scale: 0.95 } : {}}
+              onClick={handleCompletePlanning}
+              disabled={loading || !selectedWeek || !hasAssignments(selectedWeek?.number)}
+              className={`
+                px-6 py-3 rounded-xl shadow-lg transition-all flex items-center space-x-2 text-white
+                ${loading || !selectedWeek || !hasAssignments(selectedWeek?.number)
+                  ? 'bg-gray-400 cursor-not-allowed' 
+                  : 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:shadow-xl'
+                }
+              `}
+            >
+              {loading ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              ) : (
+                <FiCheck className="h-5 w-5" />
+              )}
+              <span>{loading ? 'Finalisation...' : 'Terminer le Planning'}</span>
+            </motion.button>
+
+            {/* Bouton: Demander réouverture (visible pour Chef si terminé) */}
+            {(() => {
+              if (!selectedWeek) return null;
+              const wkKey = `${selectedYear}-W${selectedWeek.number}`;
+              const status = weeklyPlannings[wkKey]?._status || 'draft';
+              if (status !== 'completed') return null;
+              if (user?.role !== 'chef' && user?.role !== 'chef_d_atelier') return null;
+              const handleRequestReopen = async () => {
+                try {
+                  const reason = window.prompt('Raison de la demande de réouverture ? (optionnel)') || '';
+                  const tokenLocal = localStorage.getItem('authToken');
+                  const planningId = weeklyPlannings[wkKey]?._id;
+                  if (!planningId) return alert('Planning introuvable');
+                  const resp = await fetch(`http://localhost:3001/api/weekly-plannings/${planningId}/request-reopen`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tokenLocal}` },
+                    body: JSON.stringify({ reason })
+                  });
+                  if (!resp.ok) {
+                    const t = await resp.text();
+                    return alert(`Échec demande réouverture: ${t}`);
+                  }
+                  alert('✅ Demande de réouverture envoyée');
+                } catch (e) {
+                  console.warn('Erreur demande réouverture:', e);
+                  alert('Erreur demande réouverture');
+                }
+              };
+              return (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleRequestReopen}
+                  className="px-6 py-3 rounded-xl shadow-lg transition-all flex items-center space-x-2 text-white bg-gradient-to-r from-violet-500 to-purple-600 hover:shadow-xl"
+                >
+                  <FiRefreshCw className="h-5 w-5" />
+                  <span>Demander réouverture</span>
+                </motion.button>
+              );
+            })()}
+
+            {/* Bouton: Approuver réouverture (visible pour RH/Admin si demande en attente) */}
+            {(() => {
+              if (!selectedWeek) return null;
+              const wkKey = `${selectedYear}-W${selectedWeek.number}`;
+              const status = weeklyPlannings[wkKey]?._status || 'draft';
+              const requested = !!weeklyPlannings[wkKey]?._reopenRequested;
+              if (status !== 'completed' || !requested) return null;
+              if (user?.role !== 'administrateur' && user?.role !== 'rh') return null;
+              const handleApproveReopen = async () => {
+                try {
+                  const tokenLocal = localStorage.getItem('authToken');
+                  const planningId = weeklyPlannings[wkKey]?._id;
+                  if (!planningId) return alert('Planning introuvable');
+                  const resp = await fetch(`http://localhost:3001/api/weekly-plannings/${planningId}/approve-reopen`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Authorization': `Bearer ${tokenLocal}` }
+                  });
+                  if (!resp.ok) {
+                    const t = await resp.text();
+                    return alert(`Échec approbation: ${t}`);
+                  }
+                  alert('✅ Réouverture approuvée (planning en brouillon)');
+                  window.location.reload();
+                } catch (e) {
+                  console.warn('Erreur approbation réouverture:', e);
+                  alert('Erreur approbation réouverture');
+                }
+              };
+              return (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleApproveReopen}
+                  className="px-6 py-3 rounded-xl shadow-lg transition-all flex items-center space-x-2 text-white bg-gradient-to-r from-green-500 to-emerald-600 hover:shadow-xl"
+                >
+                  <FiCheck className="h-5 w-5" />
+                  <span>Approuver réouverture</span>
+                </motion.button>
+              );
+            })()}
           </div>
+          {(!selectedWeek || !hasAssignments(selectedWeek?.number)) && (
+            <p className="text-sm text-gray-500 mt-2">
+              Sélectionnez une semaine et sauvegardez un planning avant de le terminer.
+            </p>
+          )}
         </div>
       </motion.div>
 
-      
+      {/* Statistiques rapides */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -449,9 +1028,22 @@ const PlanningCreation = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Employés disponibles</p>
+              <div className="flex items-center space-x-2">
               <p className="text-2xl font-bold text-green-600">
-                {getAvailableEmployees().length}
-              </p>
+                  {user?.role === 'administrateur' && selectedChef 
+                    ? (loadingChefEmployees ? '...' : chefEmployees.length)
+                    : getAvailableEmployees().length
+                  }
+                </p>
+                {loadingChefEmployees && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-500"></div>
+                )}
+              </div>
+              {user?.role === 'administrateur' && selectedChef && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Chef sélectionné: {chefs.find(c => c.id == selectedChef)?.name || 'Inconnu'}
+                </p>
+              )}
             </div>
             <FiUsers className="h-8 w-8 text-green-500" />
           </div>
@@ -478,7 +1070,7 @@ const PlanningCreation = () => {
         </div>
       </motion.div>
 
-      
+      {/* Agenda des semaines */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -496,13 +1088,18 @@ const PlanningCreation = () => {
         </div>
 
         <div className="p-6">
-          <div className="grid grid-cols-8 lg:grid-cols-12 xl:grid-cols-16 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 lg:grid-cols-12 xl:grid-cols-16 gap-3">
             {weeks.map((week) => {
               const hasPlanning = hasAssignments(week.number);
               const assignmentsCount = getWeekAssignmentsCount(week.number);
               const isPast = isPastWeek(week.number, selectedYear);
               const isEditable = isWeekEditable(week.number, selectedYear);
               const isClickable = isEditable || hasPlanning; // Modifiable si futur/actuel OU si planning existe
+              
+              // Lire status si dispo
+              const weekKey = `${selectedYear}-W${week.number}`;
+              const status = weeklyPlannings[weekKey]?._status || 'draft';
+              const isCompleted = status === 'completed';
               
               return (
                 <motion.div
@@ -514,15 +1111,17 @@ const PlanningCreation = () => {
                   onMouseLeave={() => setHoveredWeek(null)}
                   className={`
                     relative p-4 rounded-xl border-2 transition-all duration-300 group
-                    ${isPast && !hasPlanning
-                      ? 'border-gray-300 bg-gradient-to-br from-gray-100 to-gray-200 cursor-not-allowed opacity-60'
-                      : isPast && hasPlanning
-                        ? 'border-orange-300 bg-orange-50 hover:bg-orange-100 cursor-pointer shadow-md'
-                        : week.isCurrentWeek 
-                          ? 'border-blue-500 bg-blue-50 shadow-lg cursor-pointer' 
-                          : hasPlanning
-                            ? 'border-green-300 bg-green-50 hover:bg-green-100 cursor-pointer'
-                            : 'border-gray-200 bg-gray-50 hover:bg-blue-50 hover:border-blue-300 cursor-pointer'
+                    ${isCompleted
+                      ? 'border-violet-300 bg-violet-50 cursor-pointer'
+                      : isPast && !hasPlanning
+                        ? 'border-gray-300 bg-gradient-to-br from-gray-100 to-gray-200 cursor-not-allowed opacity-60'
+                        : isPast && hasPlanning
+                          ? 'border-orange-300 bg-orange-50 hover:bg-orange-100 cursor-pointer shadow-md'
+                          : week.isCurrentWeek 
+                            ? 'border-blue-500 bg-blue-50 shadow-lg cursor-pointer' 
+                            : hasPlanning
+                              ? 'border-green-300 bg-green-50 hover:bg-green-100 cursor-pointer'
+                              : 'border-gray-200 bg-gray-50 hover:bg-blue-50 hover:border-blue-300 cursor-pointer'
                     }
                     ${hoveredWeek === week.number && isClickable ? 'shadow-lg transform scale-105' : 'shadow-sm'}
                   `}
@@ -530,18 +1129,21 @@ const PlanningCreation = () => {
                   <div className="text-center">
                     <div className={`
                       text-lg font-bold mb-1 flex items-center justify-center space-x-1
-                      ${isPast && !hasPlanning
-                        ? 'text-gray-500' 
-                        : isPast && hasPlanning
-                          ? 'text-orange-600'
-                          : week.isCurrentWeek 
-                            ? 'text-blue-600' 
-                            : hasPlanning 
-                              ? 'text-green-600' 
-                              : 'text-gray-700'
+                      ${isCompleted
+                        ? 'text-violet-600'
+                        : isPast && !hasPlanning
+                          ? 'text-gray-500' 
+                          : isPast && hasPlanning
+                            ? 'text-orange-600'
+                            : week.isCurrentWeek 
+                              ? 'text-blue-600' 
+                              : hasPlanning 
+                                ? 'text-green-600' 
+                                : 'text-gray-700'
                       }
                     `}>
                       <span>{week.label}</span>
+                      {isCompleted && <FiLock className="h-3 w-3" />}
                       {isPast && !hasPlanning && <FiLock className="h-3 w-3" />}
                       {isPast && hasPlanning && <FiEdit className="h-3 w-3" />}
                     </div>
@@ -552,9 +1154,17 @@ const PlanningCreation = () => {
                     {hasPlanning && (
                       <div className="mt-2">
                         <div className={`text-white text-xs px-2 py-1 rounded-full ${
-                          isPast ? 'bg-orange-500' : 'bg-green-500'
+                          isCompleted ? 'bg-violet-500' : (isPast ? 'bg-orange-500' : 'bg-green-500')
                         }`}>
                           {assignmentsCount} employé{assignmentsCount > 1 ? 's' : ''}
+                        </div>
+                      </div>
+                    )}
+
+                    {isCompleted && (
+                      <div className="mt-1">
+                        <div className="text-xs text-violet-700 font-medium">
+                          Terminé (lecture seule)
                         </div>
                       </div>
                     )}
@@ -567,7 +1177,7 @@ const PlanningCreation = () => {
                       </div>
                     )}
 
-                    {isPast && hasPlanning && (
+                    {isPast && hasPlanning && !isCompleted && (
                       <div className="mt-1">
                         <div className="text-xs text-orange-600 font-medium">
                           Modifiable
@@ -576,8 +1186,8 @@ const PlanningCreation = () => {
                     )}
                   </div>
 
-                  
-                  {week.isCurrentWeek && !isPast && (
+                  {/* Indicateur semaine actuelle */}
+                  {week.isCurrentWeek && !isPast && !isCompleted && (
                     <div className="absolute -top-1 -right-1">
                       <div className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full shadow-lg">
                         <FiClock className="h-3 w-3" />
@@ -585,22 +1195,22 @@ const PlanningCreation = () => {
                     </div>
                   )}
 
-                  
-                  {isPast && (
+                  {/* Indicateur semaine passée */}
+                  {(isPast || isCompleted) && (
                     <div className="absolute -top-1 -right-1">
-                      <div className="bg-gray-400 text-white text-xs px-2 py-1 rounded-full shadow-lg">
+                      <div className={`text-white text-xs px-2 py-1 rounded-full shadow-lg ${isCompleted ? 'bg-violet-500' : 'bg-gray-400'}`}>
                         <FiLock className="h-3 w-3" />
                       </div>
                     </div>
                   )}
 
-                  
-                  {isEditable && (
+                  {/* Animation hover pour les semaines modifiables */}
+                  {isEditable && !isCompleted && (
                     <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-600 opacity-0 group-hover:opacity-5 rounded-xl transition-opacity duration-300" />
                   )}
 
-                  
-                  {isPast && (
+                  {/* Overlay pour les semaines passées / terminées */}
+                  {(isPast || isCompleted) && (
                     <div className="absolute inset-0 bg-gray-600 opacity-5 rounded-xl"></div>
                   )}
                 </motion.div>
@@ -610,7 +1220,7 @@ const PlanningCreation = () => {
         </div>
       </motion.div>
 
-      
+      {/* Légende */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -643,10 +1253,16 @@ const PlanningCreation = () => {
             </div>
             <span className="text-sm text-gray-600">Semaine passée (non modifiable)</span>
           </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-4 h-4 rounded border-2 border-violet-300 bg-violet-50 relative">
+              <FiLock className="h-2 w-2 text-violet-600 absolute top-0.5 left-0.5" />
+            </div>
+            <span className="text-sm text-gray-600">Planning terminé (non modifiable sauf validation RH/Admin)</span>
+          </div>
         </div>
       </motion.div>
 
-      
+      {/* Section Plannings Actifs */}
       {Object.keys(weeklyPlannings).length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -827,24 +1443,44 @@ const PlanningCreation = () => {
         </motion.div>
       )}
 
-      
-      <WeekPlanningModal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        week={selectedWeek}
-        year={selectedYear}
-        employees={getAvailableEmployees()}
-        userRole={user?.role}
-        onSave={(assignments) => {
-          if (selectedWeek) {
-            handleWeekPlanningUpdate(selectedWeek.number, assignments);
-          }
-          setShowModal(false);
-        }}
-        initialAssignments={selectedWeek ? weeklyPlannings[`${selectedYear}-W${selectedWeek.number}`] || {} : {}}
-      />
+                    {/* Modal de gestion hebdomadaire */}
+              <WeekPlanningModal
+                isOpen={showModal}
+                onClose={() => setShowModal(false)}
+                week={selectedWeek}
+                year={selectedYear}
+                employees={getAvailableEmployees()}
+                userRole={user?.role}
+                readOnly={selectedWeek ? (weeklyPlannings[`${selectedYear}-W${selectedWeek.number}`]?._status === 'completed') : false}
+                onSave={async (assignments) => {
+                  if (selectedWeek) {
+                    // Mettre à jour localement
+                    handleWeekPlanningUpdate(selectedWeek.number, assignments);
+                    // Persister immédiatement en base
+                    try {
+                      const current = assignments || {};
+                      const day_assignments = current._dayAssignments || {};
+                      const { _dayAssignments, ...assignmentsPayload } = current;
+                      const teams = Object.keys(assignmentsPayload);
+                      const planningData = {
+                        year: parseInt(selectedYear),
+                        week_number: selectedWeek.number,
+                        teams,
+                        assignments: assignmentsPayload,
+                        day_assignments,
+                        ...(user?.role === 'administrateur' && selectedChef ? { targetChefId: parseInt(selectedChef) } : {})
+                      };
+                      await saveWithRetry('http://localhost:3001/api/weekly-plannings', planningData);
+                    } catch (e) {
+                      console.warn('⚠️ Sauvegarde immédiate échouée:', e);
+                    }
+                  }
+                  setShowModal(false);
+                }}
+                initialAssignments={selectedWeek ? weeklyPlannings[`${selectedYear}-W${selectedWeek.number}`] || {} : {}}
+              />
 
-      
+      {/* Notification de progression de sauvegarde */}
       {saveProgress.isVisible && (
         <motion.div
           initial={{ opacity: 0, y: 50 }}
@@ -864,7 +1500,7 @@ const PlanningCreation = () => {
             </div>
           </div>
           
-          
+          {/* Barre de progression */}
           <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
             <div 
               className="bg-blue-500 h-2 rounded-full transition-all duration-300"

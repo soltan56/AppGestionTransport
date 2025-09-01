@@ -7,7 +7,7 @@ const LoginForm = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    role: 'chef'
+    role: 'chef_d_atelier'
   });
   const [showPassword, setShowPassword] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
@@ -24,7 +24,7 @@ const LoginForm = () => {
   }, [error, clearError]);
 
   const roles = [
-    { value: 'chef', label: 'Chef d\'Atelier', color: 'role-chef', icon: '🔧' },
+    { value: 'chef_d_atelier', label: 'Chef d\'Atelier', color: 'role-chef', icon: '🔧' },
     { value: 'rh', label: 'Ressources Humaines', color: 'role-rh', icon: '👥' },
     { value: 'administrateur', label: 'Administrateur', color: 'role-admin', icon: '⚙️' }
   ];
@@ -58,8 +58,11 @@ const LoginForm = () => {
     const result = await login(formData.email, formData.password, formData.role);
     
     if (!result.success) {
+      // L'erreur est gérée par le contexte
     }
   };
+
+
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -68,6 +71,7 @@ const LoginForm = () => {
       [name]: value
     }));
     
+    // Effacer l'erreur de validation pour ce champ
     if (validationErrors[name]) {
       setValidationErrors(prev => ({
         ...prev,
@@ -94,26 +98,35 @@ const LoginForm = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div
+      className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative"
+      style={{
+        backgroundImage: `url(${process.env.PUBLIC_URL}/background.jpg)`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      <div className="absolute inset-0 bg-black/35 md:bg-black/25 backdrop-blur-[1px]" />
       <motion.div
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="max-w-md w-full space-y-8"
+        className="relative max-w-md w-full space-y-8"
       >
         <motion.div variants={itemVariants} className="text-center">
-          <motion.div
+          <motion.img
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-            className="mx-auto h-20 w-20 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg"
-          >
-            <span className="text-3xl text-white">🚌</span>
-          </motion.div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">
+            src={`${process.env.PUBLIC_URL}/SONOCO.png`}
+            alt="SONOCO"
+            className="mx-auto h-[107px] w-[107px] rounded-2xl shadow-lg ring-2 ring-white/70 mb-6 object-contain bg-white"
+          />
+          <h2 className="text-3xl font-bold text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.6)] mb-2">
             Gestion Transport
           </h2>
-          <p className="text-gray-600">
+          <p className="text-blue-50/90 drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]">
             Connectez-vous à votre espace d'administration
           </p>
         </motion.div>
@@ -123,6 +136,7 @@ const LoginForm = () => {
           className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100"
         >
           <form className="space-y-6" onSubmit={handleSubmit}>
+            {/* Sélection du rôle */}
             <motion.div variants={itemVariants}>
               <label className="block text-sm font-medium text-gray-700 mb-3">
                 <FiUser className="inline mr-2" />
@@ -161,6 +175,7 @@ const LoginForm = () => {
               </div>
             </motion.div>
 
+            {/* Email */}
             <motion.div variants={itemVariants}>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                 <FiMail className="inline mr-2" />
@@ -191,6 +206,7 @@ const LoginForm = () => {
               )}
             </motion.div>
 
+            {/* Mot de passe */}
             <motion.div variants={itemVariants}>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                 <FiLock className="inline mr-2" />
@@ -227,6 +243,7 @@ const LoginForm = () => {
               )}
             </motion.div>
 
+            {/* Message d'erreur global */}
             {error && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -238,7 +255,9 @@ const LoginForm = () => {
               </motion.div>
             )}
 
-            <motion.div variants={itemVariants}>
+            {/* Boutons de connexion */}
+            <motion.div variants={itemVariants} className="space-y-3">
+              {/* Connexion */}
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}

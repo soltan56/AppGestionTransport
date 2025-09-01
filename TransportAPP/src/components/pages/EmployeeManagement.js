@@ -11,52 +11,67 @@ import {
   FiX,
   FiFilter,
   FiDownload,
-  FiMail,
-  FiPhone,
   FiBriefcase,
   FiTruck
 } from 'react-icons/fi';
 import { useData } from '../../contexts/DataContext';
+import { useAuth } from '../../contexts/AuthContext';
 import * as XLSX from 'xlsx';
 
 const EmployeeManagement = () => {
-  const { employees, addEmployee, updateEmployee, deleteEmployee, plannings } = useData();
+  const { employees, deleteEmployee, plannings } = useData();
+  const { user, token } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTeam, setFilterTeam] = useState('all');
 
   const [filteredEmployees, setFilteredEmployees] = useState([]);
+  const [allEmployees, setAllEmployees] = useState([]);
+  const [showRequestModal, setShowRequestModal] = useState(false);
+  const [requestSearch, setRequestSearch] = useState('');
+  const [selectedForRequest, setSelectedForRequest] = useState(new Set());
+  const [sendingRequest, setSendingRequest] = useState(false);
+  const [myRequests, setMyRequests] = useState([]);
 
-  const predefinedEmployees = [
-    'DENNI AZIZ', 'EL BAKRI REDOUANE', 'FADEL Imad', 'JAMILI MOHAMED', 'SOFIANE MOURAD',
-    'WAKRIM MOHAMED', 'KARNBAH MOHAMED', 'MOUDAKIR SMAIN', 'FEROUAL ABDELALI', 'AZLAG HASSAN',
-    'NASSOUR ABDELILAH', 'TABARANE YOUNES', 'OUAJHI YOUNESS', 'ELHANSALI ABDERRAZAK', 'LABNI MUSTAPHA',
-    'IJABA MOUNA', 'OUAHID ADIL', 'SAIS BRAHIM', 'ENNAJOUI CHAKIR', 'KTRI Abdelkarim',
-    'ADDAHR AYOUB', 'EZZINE ABDELALI', 'MAAGLI SAID', 'JAWAD ABDERRAHIM', 'TALEB Rachid',
-    'NADI TARIK', 'FELLAKI ABDELKARIM', 'SANID TAOUFIK', 'BACHRI HICHAM', 'FARID MOHAMMED',
-    'BENNANNA DRISS', 'AOUZANE Hamid', 'AMIZ REDOUANE', 'HAILI MOHAMED', 'HIRMANE FOUAD',
-    'BAHROUNE MOHAMED', 'MASSAKI ABDESSAMAD', 'AZOUZI AHMED', 'KOBBI AHMED', 'ERRADI ABDELWAHED',
-    'ESSOLAMI HASSAN', 'MARBOUH MUSTAPHA', 'KAITER RACHID', 'ERREJIOUI SAID', 'JMOUHI MOHAMED',
-    'GHOUFRAOUI MUSTAPHA', 'ALSAFI KAMAL', 'ESSAIDI MOHAMED', 'FADEL ABDELLATIF', 'FADEL SAMI',
-    'BOUABID JAWAD', 'SAHRANI MOHAMED', 'KARBAL BOUCHAIB', 'BELYAKOUT AZIZ', 'HOUAFI AHMED',
-    'SOULMANI RACHID', 'HADDOU Fatima Zahra', 'TIJAHI ASMAA', 'SAADOUNI SAID', 'KASSI AHMED',
-    'NABBAR ABID', 'ANWAR AZIZ', 'RJAFALLAH LARBI', 'EL AZAR ABDELJALIL', 'FAIZ SAID',
-    'SABIR NOUREDDINE', 'ERRAJI ELMEHDI', 'MISSAOUI ABDELMAJID', 'FETHERRAHIM BADR', 'MAHMAH AYOUB',
-    'BELHACHEMI OTHMANE', 'SAIS TARIK', 'DARWICH SAID', 'SKOURI ABDELAZIZ', 'ORANGE MOHAMMED',
-    'AITBRAHIM SAID', 'SOUAT MALIKA', 'BROGI MINA', 'MARHRAOUI SAADIA', 'ARICHI SOUAD',
-    'HOSNI KHADIJA', 'RAFYA SAADIA', 'HMIMSY FATIMA', 'HABIBI MINA', 'HASSI NAIMA',
-    'HABACHI MOHAMED', 'FATHY MEHDI', 'MAOUHOUB JIHANE', 'SOUALI KHALISA', 'BOUKHAMI Abdessamad',
-    'RTAIMAT HAMZA', 'BAYI HICHAM', 'LMERS ACHERAF', 'NASSIR Abdelali', 'HATOULI OMAR',
-    'ABDELKAML YOUSSEF', 'BIYANI AHEMAD', 'SOUBAIR HANANE', 'NABIL MOHAMED', 'CHAFIQ SAFAA',
-    'AYADI MOSTAFA', 'LAABID KABIRA', 'HABACHI SOUFIANE', 'HAMZA OULHADR', 'AIT IDAR RACHID',
-    'KHAMLICHI AHEMAD', 'LAHMIDI ABDELHAMID', 'CHAMITI Salah Eddine', 'JARNIJA ABDLAH', 'YASSINE ABDLHADI',
-    'ERRADOUANI KARIMA', 'DAHR KHALID', 'BOUKADOM MOHAMED', 'ADLANI MOHAMED', 'EZZOUBIR Akram',
-    'LAHRICHI HAMZA', 'MOUHAL SOUAD', 'ZITOUNI TALALI', 'ELMAABADY MOHAMED', 'MOUKHTAM NABIL',
-    'LKIHAL MEHDI', 'OUMALELK MOUAD', 'MORABIT SALAHDINE'
-  ];
+  const loadMyRequests = async () => {
+    try {
+      const resp = await fetch('http://localhost:3001/api/requests/mine', {
+        credentials: 'include',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (resp.ok) {
+        const rows = await resp.json();
+        setMyRequests(rows);
+      }
+    } catch (e) {}
+  };
 
-  const teams = ['Matin', 'Soir', 'Nuit', 'Normal'];
+  useEffect(() => { loadMyRequests(); }, [token]);
+
+  // Charger tous les employés pour la demande (chefs doivent voir tout le monde)
+  useEffect(() => {
+    const loadAll = async () => {
+      try {
+        const resp = await fetch('http://localhost:3001/api/employees/all', { credentials:'include', headers:{ 'Authorization': `Bearer ${token}` }});
+        if (resp.ok) { const rows = await resp.json(); setAllEmployees(rows); }
+      } catch(e) {}
+    };
+    if (token) loadAll();
+  }, [token]);
+
+  // Déterminer les permissions selon le rôle
+  const isChef = user?.role === 'chef' || user?.role === 'chef_d_atelier';
+  const isAdmin = user?.role === 'administrateur';
+  const isRH = user?.role === 'rh';
+
+  // Les RH ont maintenant les mêmes permissions que les administrateurs
+  const canManageEmployees = isChef || isAdmin || isRH;
+
+  // Employés prédéfinis basés sur les données fournies (conservés dans la base de données)
+  // Liste supprimée pour éviter les warnings ESLint car non utilisée dans le composant
+
+  const teams = ['MATIN', 'SOIR', 'Normal']; // Valeurs réelles de la base de données
 
   useEffect(() => {
     let filtered = employees;
@@ -64,7 +79,8 @@ const EmployeeManagement = () => {
     if (searchTerm) {
       filtered = filtered.filter(employee =>
         `${employee.nom} ${employee.prenom}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        employee.email?.toLowerCase().includes(searchTerm.toLowerCase())
+        employee.atelier?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        employee.point_ramassage?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -74,6 +90,8 @@ const EmployeeManagement = () => {
 
     setFilteredEmployees(filtered);
   }, [employees, searchTerm, filterTeam]);
+
+  // Les employés sont maintenant chargés depuis l'API via le DataContext
 
   const handleExportEmployees = () => {
     if (filteredEmployees.length === 0) {
@@ -85,12 +103,11 @@ const EmployeeManagement = () => {
       'Nom': employee.nom,
       'Prénom': employee.prenom,
       'Point de Ramassage': employee.pointRamassage || employee.point_ramassage || '',
-      'Circuit Affecté': employee.circuit || '',
-      'Email': employee.email || '',
-      'Téléphone': employee.telephone || '',
+      'Circuit Affecté': employee.circuit_affecte || '',
       'Équipe': employee.equipe || '',
       'Atelier': employee.atelier || '',
-      'Date Embauche': employee.dateEmbauche || '',
+      'Type Contrat': employee.type_contrat || '',
+      'Date Embauche': employee.date_embauche || '',
       'Status': employee.status || 'actif',
       'Créé le': employee.created_at ? new Date(employee.created_at).toLocaleDateString('fr-FR') : ''
     }));
@@ -100,18 +117,16 @@ const EmployeeManagement = () => {
       const worksheet = XLSX.utils.json_to_sheet(employeeData);
       
       worksheet['!cols'] = [
-        { wch: 20 },
-        { wch: 20 },
-        { wch: 40 },
-        { wch: 20 },
-        { wch: 30 },
-        { wch: 15 },
-        { wch: 12 },
-        { wch: 10 },
-        { wch: 20 },
-        { wch: 12 },
-        { wch: 10 },
-        { wch: 12 }  
+        { wch: 20 }, // Nom
+        { wch: 20 }, // Prénom
+        { wch: 40 }, // Point de Ramassage
+        { wch: 20 }, // Circuit Affecté
+        { wch: 10 }, // Équipe
+        { wch: 20 }, // Atelier
+        { wch: 15 }, // Type Contrat
+        { wch: 12 }, // Date Embauche
+        { wch: 10 }, // Status
+        { wch: 12 }  // Créé le
       ];
 
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Employés');
@@ -127,11 +142,12 @@ const EmployeeManagement = () => {
     }
   };
 
-  const getEmployeeUsage = (employeeName) => {
-    return plannings.filter(p => 
-      p.nom && p.nom.toLowerCase().includes(employeeName.toLowerCase())
-    ).length;
-  };
+  // Fonction supprimée car non utilisée (warning ESLint)
+  // const getEmployeeUsage = (employeeName) => {
+  //   return plannings.filter(p => 
+  //     p.nom && p.nom.toLowerCase().includes(employeeName.toLowerCase())
+  //   ).length;
+  // };
 
 
 
@@ -152,40 +168,57 @@ const EmployeeManagement = () => {
 
   return (
     <div className="space-y-6">
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Gestion des Employés</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {isChef ? 'Mes Employés' : (isAdmin || isRH) ? 'Gestion Globale des Employés' : 'Consultation des Employés'}
+          </h1>
           <p className="text-gray-600 mt-1">
-            {filteredEmployees.length} employé(s) 
-            {filteredEmployees.length !== employees.length && ` sur ${employees.length} total`}
+            {isChef && (
+              <>Employés sous votre responsabilité - {filteredEmployees.length} employé(s)</>
+            )}
+            {isAdmin && (
+              <>Gestion complète de tous les employés - {filteredEmployees.length} employé(s) 
+              {filteredEmployees.length !== employees.length && ` sur ${employees.length} total`}</>
+            )}
+            {isRH && (
+              <>Gestion complète de tous les employés - {filteredEmployees.length} employé(s) 
+              {filteredEmployees.length !== employees.length && ` sur ${employees.length} total`}</>
+            )}
           </p>
         </div>
         
         <div className="flex items-center space-x-3">
-          <button
-            onClick={handleExportEmployees}
-            className="btn-secondary flex items-center space-x-2"
-            disabled={filteredEmployees.length === 0}
-            title="Exporter les employés vers Excel"
-          >
-            <FiDownload className="h-4 w-4" />
-            <span>Export Excel</span>
-          </button>
+          {isChef && (
+            <button
+              onClick={() => setShowRequestModal(true)}
+              className="btn-secondary flex items-center space-x-2"
+              title="Demander des employés"
+            >
+              <FiUsers className="h-4 w-4" />
+              <span>Demander des employés</span>
+            </button>
+          )}
           
-          <button
-            onClick={() => {
-              setSelectedEmployee(null);
-              setShowForm(true);
-            }}
-            className="btn-primary flex items-center space-x-2"
-          >
-            <FiPlus className="h-4 w-4" />
-            <span>Nouvel Employé</span>
-          </button>
+          {/* Les RH ont maintenant accès à l'ajout d'employés */}
+          {canManageEmployees && !isChef && (
+            <button
+              onClick={() => {
+                setSelectedEmployee(null);
+                setShowForm(true);
+              }}
+              className="btn-primary flex items-center space-x-2"
+            >
+              <FiPlus className="h-4 w-4" />
+              <span>{isChef ? 'Ajouter un Employé' : 'Nouvel Employé'}</span>
+            </button>
+          )}
         </div>
       </div>
 
+      {/* Statistiques rapides */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="card">
           <div className="flex items-center justify-between">
@@ -240,13 +273,14 @@ const EmployeeManagement = () => {
         </div>
       </div>
 
+      {/* Filtres et recherche */}
       <div className="card">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0 md:space-x-4">
           <div className="relative flex-1 max-w-md">
             <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <input
               type="text"
-              placeholder="Rechercher par nom, prénom, email..."
+              placeholder="Rechercher par nom, prénom, atelier, point de ramassage..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="input-field pl-10"
@@ -271,6 +305,7 @@ const EmployeeManagement = () => {
         </div>
       </div>
 
+      {/* Liste des employés */}
       <div className="card">
         {filteredEmployees.length > 0 ? (
           <div className="overflow-x-auto">
@@ -300,19 +335,11 @@ const EmployeeManagement = () => {
                         <div className="font-medium text-gray-900">
                           {employee.nom} {employee.prenom}
                         </div>
-                        <div className="text-sm text-gray-500 space-y-1">
-                          {employee.email && (
-                            <div className="flex items-center">
-                              <FiMail className="h-3 w-3 text-gray-400 mr-1" />
-                              {employee.email}
-                            </div>
-                          )}
-                          {employee.telephone && (
-                            <div className="flex items-center">
-                              <FiPhone className="h-3 w-3 text-gray-400 mr-1" />
-                              {employee.telephone}
-                            </div>
-                          )}
+                        <div className="text-sm text-gray-500">
+                          <div className="flex items-center">
+                            <FiBriefcase className="h-3 w-3 text-gray-400 mr-1" />
+                            {employee.type_contrat || 'Non défini'}
+                          </div>
                         </div>
                       </td>
                       <td className="py-3 px-4 text-gray-700">
@@ -323,7 +350,7 @@ const EmployeeManagement = () => {
                       <td className="py-3 px-4 text-gray-700">
                         <div className="flex items-center text-sm">
                           <FiTruck className="h-3 w-3 text-gray-400 mr-2" />
-                          {employee.circuit || 'Non affecté'}
+                          {employee.circuit_affecte || 'Non affecté'}
                         </div>
                       </td>
                       <td className="py-3 px-4">
@@ -336,32 +363,42 @@ const EmployeeManagement = () => {
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() => {
-                              setSelectedEmployee(employee);
-                              setShowForm(true);
-                            }}
-                            className="p-1 text-blue-600 hover:bg-blue-100 rounded transition-colors"
-                            title="Modifier"
-                          >
-                            <FiEdit className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={async () => {
-                              if (window.confirm('Êtes-vous sûr de vouloir supprimer cet employé ?')) {
-                                const success = await deleteEmployee(employee.id);
-                                if (success) {
-                                  console.log('Employé supprimé avec succès');
-                                } else {
-                                  alert('Erreur lors de la suppression de l\'employé');
-                                }
-                              }
-                            }}
-                            className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
-                            title="Supprimer"
-                          >
-                            <FiTrash2 className="h-4 w-4" />
-                          </button>
+                          {/* Les RH ont maintenant accès aux actions de modification et suppression */}
+                          {canManageEmployees ? (
+                            <>
+                              {/* Admin, Chef et RH peuvent modifier et supprimer */}
+                              <button
+                                onClick={() => {
+                                  setSelectedEmployee(employee);
+                                  setShowForm(true);
+                                }}
+                                className="p-1 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                                title="Modifier"
+                              >
+                                <FiEdit className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  if (window.confirm('Êtes-vous sûr de vouloir supprimer cet employé ?')) {
+                                    const success = await deleteEmployee(employee.id);
+                                    if (success) {
+                                      console.log('Employé supprimé avec succès');
+                                    } else {
+                                      alert('Erreur lors de la suppression de l\'employé');
+                                    }
+                                  }
+                                }}
+                                className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
+                                title="Supprimer"
+                              >
+                                <FiTrash2 className="h-4 w-4" />
+                              </button>
+                            </>
+                          ) : (
+                            <span className="text-sm text-gray-500 px-2 py-1 bg-gray-100 rounded">
+                              Consultation seule
+                            </span>
+                          )}
                         </div>
                       </td>
                     </motion.tr>
@@ -380,7 +417,7 @@ const EmployeeManagement = () => {
                 : 'Commencez par ajouter votre premier employé.'
               }
             </p>
-            {!searchTerm && filterTeam === 'all' && (
+            {!searchTerm && filterTeam === 'all' && canManageEmployees && (
               <button
                 onClick={() => {
                   setSelectedEmployee(null);
@@ -395,6 +432,45 @@ const EmployeeManagement = () => {
         )}
       </div>
 
+      {/* Demandes envoyées */}
+      {isChef && (
+        <div className="card">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Mes demandes envoyées</h3>
+            <button onClick={loadMyRequests} className="text-sm text-blue-600 hover:underline">Rafraîchir</button>
+          </div>
+          {myRequests.length === 0 ? (
+            <div className="text-sm text-gray-500">Aucune demande envoyée.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200 text-sm text-gray-600">
+                    <th className="text-left py-2 px-3">Date</th>
+                    <th className="text-left py-2 px-3">Type</th>
+                    <th className="text-left py-2 px-3">Détails</th>
+                    <th className="text-left py-2 px-3">Statut</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {myRequests.map(req => (
+                    <tr key={req.id} className="border-b border-gray-100 text-sm">
+                      <td className="py-2 px-3">{new Date(req.requested_at).toLocaleString()}</td>
+                      <td className="py-2 px-3">{req.type === 'employee' ? 'Employés' : 'Générale'}</td>
+                      <td className="py-2 px-3">{req.type === 'employee' ? `${req.employee_count || 0} employé(s)` : (req.message || '')}</td>
+                      <td className="py-2 px-3">
+                        <span className={`px-2 py-0.5 rounded-full text-xs ${req.status==='pending'?'bg-yellow-100 text-yellow-700':req.status==='approved'?'bg-green-100 text-green-700':'bg-red-100 text-red-700'}`}>{req.status}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Modal de formulaire */}
       {showForm && (
         <EmployeeForm
           employee={selectedEmployee}
@@ -408,30 +484,99 @@ const EmployeeManagement = () => {
           }}
         />
       )}
+
+      {/* Modal demande d'employés */}
+      <AnimatePresence>
+        {showRequestModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+              <div className="p-4 border-b flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">Demander des employés</h3>
+                <button onClick={()=>setShowRequestModal(false)} className="p-2 hover:bg-gray-100 rounded"><FiX className="h-5 w-5 text-gray-500"/></button>
+              </div>
+              <div className="p-4 border-b">
+                <div className="relative">
+                  <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <input value={requestSearch} onChange={(e)=>setRequestSearch(e.target.value)} className="input-field pl-9" placeholder="Rechercher par nom ou fonction..." />
+                </div>
+              </div>
+              <div className="flex-1 overflow-auto p-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {(allEmployees.length>0 ? allEmployees : employees)
+                    .filter(e => {
+                      const q = requestSearch.toLowerCase();
+                      return !q || `${e.nom} ${e.prenom}`.toLowerCase().includes(q) || (e.type_contrat||'').toLowerCase().includes(q);
+                    })
+                    .map(emp => {
+                      const checked = selectedForRequest.has(emp.id);
+                      return (
+                        <label key={emp.id} className={`flex items-center justify-between p-3 border rounded-lg ${checked?'bg-blue-50 border-blue-200':'bg-white border-gray-200'}`}>
+                          <div className="text-sm">
+                            <div className="font-medium text-gray-900">{emp.nom} {emp.prenom}</div>
+                            <div className="text-gray-500">{emp.atelier} • {emp.type_contrat || 'N/A'}</div>
+                          </div>
+                          <input type="checkbox" checked={checked} onChange={(e)=>{
+                            const next = new Set(selectedForRequest);
+                            if (e.target.checked) next.add(emp.id); else next.delete(emp.id);
+                            setSelectedForRequest(next);
+                          }} />
+                        </label>
+                      );
+                    })}
+                </div>
+              </div>
+              <div className="p-4 border-t flex items-center justify-between">
+                <div className="text-sm text-gray-600">Sélectionnés: {selectedForRequest.size}</div>
+                <div className="space-x-2">
+                  <button onClick={()=>setShowRequestModal(false)} className="btn-secondary">Annuler</button>
+                  <button disabled={sendingRequest || selectedForRequest.size===0} onClick={async()=>{
+                    try{
+                      setSendingRequest(true);
+                      const resp = await fetch('http://localhost:3001/api/requests', {
+                        method:'POST', credentials:'include', headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+                        body: JSON.stringify({ type:'employee', employee_ids: Array.from(selectedForRequest), target_role:'rh' })
+                      });
+                      if(!resp.ok){ const t=await resp.text(); return alert(`Erreur: ${t}`);} 
+                      alert('✅ Demande envoyée');
+                      setShowRequestModal(false); setSelectedForRequest(new Set());
+                      loadMyRequests();
+                    }catch(e){ alert('Erreur envoi demande'); } finally{ setSendingRequest(false);} 
+                  }} className={`btn-primary ${sendingRequest?'opacity-70 cursor-not-allowed':''}`}>{sendingRequest?'Envoi...':'Envoyer la demande'}</button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
 
+// Composant formulaire d'employé
 const EmployeeForm = ({ employee, onClose, onSuccess }) => {
-  const { addEmployee, updateEmployee } = useData();
+  const { addEmployee, updateEmployee, ateliers, fetchAteliers } = useData();
   
   const [formData, setFormData] = useState({
     nom: employee?.nom || '',
     prenom: employee?.prenom || '',
     pointRamassage: employee?.pointRamassage || employee?.point_ramassage || '',
-    circuit: employee?.circuit || '',
-    email: employee?.email || '',
-    telephone: employee?.telephone || '',
-    equipe: employee?.equipe || 'Matin',
-    atelier: employee?.atelier || 'Atelier Principal',
-    dateEmbauche: employee?.dateEmbauche || '',
+    circuit: employee?.circuit_affecte || '',
+    equipe: employee?.equipe || 'MATIN',
+    atelier: employee?.atelier || 'MPC',
+    dateEmbauche: employee?.date_embauche || '',
+    typeContrat: employee?.type_contrat || 'CDI',
     status: employee?.status || 'actif'
   });
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const teams = ['Matin', 'Soir', 'Nuit', 'Normal'];
+  const teams = ['MATIN', 'SOIR', 'Normal']; // Valeurs réelles de la base de données
+
+  // Charger les ateliers au montage du composant
+  useEffect(() => {
+    fetchAteliers();
+  }, [fetchAteliers]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -459,9 +604,7 @@ const EmployeeForm = ({ employee, onClose, onSuccess }) => {
       newErrors.prenom = 'Le prénom est requis';
     }
 
-    if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Format d\'email invalide';
-    }
+    // Validation email supprimée comme demandé
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -482,8 +625,10 @@ const EmployeeForm = ({ employee, onClose, onSuccess }) => {
 
       let result;
       if (employee) {
+        // Modification d'un employé existant
         result = await updateEmployee(employee.id, employeeData);
       } else {
+        // Création d'un nouvel employé
         result = await addEmployee(employeeData);
       }
       
@@ -585,36 +730,7 @@ const EmployeeForm = ({ employee, onClose, onSuccess }) => {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className={`input-field ${errors.email ? 'border-red-300' : ''}`}
-                placeholder="ahmed.benali@transport.ma"
-              />
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Téléphone
-              </label>
-              <input
-                type="tel"
-                name="telephone"
-                value={formData.telephone}
-                onChange={handleChange}
-                className="input-field"
-                placeholder="0612345678"
-              />
-            </div>
+            {/* Champs Email et Téléphone supprimés comme demandé */}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -636,14 +752,31 @@ const EmployeeForm = ({ employee, onClose, onSuccess }) => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Atelier
               </label>
-              <input
-                type="text"
+              <select
                 name="atelier"
                 value={formData.atelier}
                 onChange={handleChange}
                 className="input-field"
-                placeholder="Ex: Atelier Principal"
-              />
+              >
+                {ateliers.map(atelier => (
+                  <option key={atelier.id} value={atelier.nom}>{atelier.nom}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Type de Contrat
+              </label>
+              <select
+                name="typeContrat"
+                value={formData.typeContrat}
+                onChange={handleChange}
+                className="input-field"
+              >
+                <option value="CDI">CDI</option>
+                <option value="Intérimaire">Intérimaire</option>
+              </select>
             </div>
 
             <div>

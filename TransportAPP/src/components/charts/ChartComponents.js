@@ -13,6 +13,7 @@ import {
 } from 'chart.js';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 
+// Enregistrer les composants Chart.js
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -25,6 +26,7 @@ ChartJS.register(
   LineElement
 );
 
+// Graphique en barres pour les effectifs par équipe
 export const EmployeesByTeamChart = ({ data }) => {
   const chartData = {
     labels: ['Équipe Matin', 'Équipe Soir', 'Équipe Nuit', 'Équipe Normal'],
@@ -33,10 +35,10 @@ export const EmployeesByTeamChart = ({ data }) => {
         label: 'Effectif',
         data: data || [25, 20, 15, 25],
         backgroundColor: [
-          'rgba(59, 130, 246, 0.8)', 
-          'rgba(16, 185, 129, 0.8)', 
-          'rgba(139, 92, 246, 0.8)', 
-          'rgba(245, 158, 11, 0.8)', 
+          'rgba(59, 130, 246, 0.8)', // Blue
+          'rgba(16, 185, 129, 0.8)', // Green
+          'rgba(139, 92, 246, 0.8)', // Purple
+          'rgba(245, 158, 11, 0.8)', // Yellow
         ],
         borderColor: [
           'rgba(59, 130, 246, 1)',
@@ -91,6 +93,7 @@ export const EmployeesByTeamChart = ({ data }) => {
   return <Bar data={chartData} options={options} />;
 };
 
+// Graphique circulaire pour la disponibilité des bus
 export const BusAvailabilityChart = ({ available = 8, total = 12 }) => {
   const used = total - available;
   
@@ -100,8 +103,8 @@ export const BusAvailabilityChart = ({ available = 8, total = 12 }) => {
       {
         data: [available, used],
         backgroundColor: [
-          'rgba(16, 185, 129, 0.8)', 
-          'rgba(239, 68, 68, 0.8)', 
+          'rgba(16, 185, 129, 0.8)', // Green for available
+          'rgba(239, 68, 68, 0.8)',  // Red for used
         ],
         borderColor: [
           'rgba(16, 185, 129, 1)',
@@ -145,6 +148,7 @@ export const BusAvailabilityChart = ({ available = 8, total = 12 }) => {
   return <Doughnut data={chartData} options={options} />;
 };
 
+// Graphique linéaire pour l'évolution des effectifs
 export const EmployeeTrendChart = ({ data }) => {
   const chartData = {
     labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun'],
@@ -229,6 +233,7 @@ export const EmployeeTrendChart = ({ data }) => {
   return <Line data={chartData} options={options} />;
 };
 
+// Graphique pour l'occupation des circuits
 export const CircuitOccupancyChart = ({ data }) => {
   const chartData = {
     labels: ['Circuit Nord', 'Circuit Sud', 'Circuit Est', 'Circuit Ouest'],
@@ -301,7 +306,9 @@ export const CircuitOccupancyChart = ({ data }) => {
   return <Bar data={chartData} options={options} />;
 };
 
+// Heatmap simple pour les points de ramassage (simulation)
 export const PickupHeatmapChart = () => {
+  // Simulation d'une heatmap avec des données factices
   const heatmapData = [
     { zone: 'Zone A', frequency: 85, color: 'bg-red-500' },
     { zone: 'Zone B', frequency: 67, color: 'bg-orange-500' },
@@ -343,6 +350,7 @@ export const PickupHeatmapChart = () => {
   );
 };
 
+// Composant conteneur pour plusieurs graphiques
 export const StatsContainer = ({ children, title, className = "" }) => {
   return (
     <div className={`card ${className}`}>

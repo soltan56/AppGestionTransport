@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
+// GET /api/buses
 router.get('/', async (req, res) => {
   try {
     const [rows] = await req.pool.query('SELECT * FROM buses ORDER BY numero');
@@ -11,7 +12,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-
+// POST /api/buses
 router.post('/', async (req, res) => {
   const { numero, modele, capacite, status = 'disponible' } = req.body;
   if (!numero) {
