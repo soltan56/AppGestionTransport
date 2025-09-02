@@ -136,6 +136,28 @@ const RHHome = () => {
             Gérer les Plannings
           </button>
         </motion.div>
+
+        {/* Nouvelle carte: Gestion des Tickets */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.1 }}
+          className="bg-white rounded-lg p-6 shadow-sm border border-gray-200"
+        >
+          <div className="flex items-center mb-4">
+            <FiFileText className="h-8 w-8 text-orange-600 mr-3" />
+            <h3 className="text-lg font-semibold text-gray-900">Gestion des Tickets</h3>
+          </div>
+          <p className="text-gray-600 mb-4">
+            Suivez et traitez les demandes, résolutions et notifications de tickets.
+          </p>
+          <button
+            onClick={() => navigate('/dashboard/notifications/tickets')}
+            className="bg-orange-600 hover:bg-orange-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
+          >
+            Gérer les Tickets
+          </button>
+        </motion.div>
       </div>
 
       {/* Rapports rapides */}

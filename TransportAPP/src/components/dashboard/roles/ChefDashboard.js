@@ -48,7 +48,7 @@ const ChefHome = () => {
       return '';
     }
   }, [employees]);
-
+  
   // Charger les plannings récents et actifs
   useEffect(() => {
     const fetchPlannings = async () => {

@@ -331,9 +331,6 @@ const InterimManagement = () => {
                   Intérimaire
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Équipe
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Atelier Actuel
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -370,16 +367,6 @@ const InterimManagement = () => {
                           </div>
                         </div>
                       </div>
-                    </td>
-                    
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        interimaire.equipe === 'MATIN' ? 'bg-blue-100 text-blue-800' :
-                        interimaire.equipe === 'SOIR' ? 'bg-green-100 text-green-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {interimaire.equipe}
-                      </span>
                     </td>
                     
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">

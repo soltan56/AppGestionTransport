@@ -377,6 +377,13 @@ const Header = () => {
                   )}
                 </AnimatePresence>
               </div>
+
+              {/* Logo SONOCO à droite du profil */}
+              <img
+                src={`${process.env.PUBLIC_URL}/SONOCO.png`}
+                alt="SONOCO"
+                className="h-10 w-10 rounded-lg object-contain ring-1 ring-gray-200"
+              />
             </div>
           </div>
         </div>

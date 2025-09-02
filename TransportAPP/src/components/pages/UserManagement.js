@@ -11,6 +11,7 @@ import {
   FiTrash2,
   FiPlus,
   FiEye,
+  FiEyeOff,
   FiShield,
   FiTool,
   FiUserPlus
@@ -51,6 +52,24 @@ const UserManagement = () => {
     role: 'chef',
     atelier_id: null
   });
+
+  // Gestion des chefs masqués (localStorage)
+  const [hiddenChefIds, setHiddenChefIds] = useState(() => {
+    try {
+      const raw = localStorage.getItem('hiddenChefIds');
+      const arr = raw ? JSON.parse(raw) : [];
+      return new Set(Array.isArray(arr) ? arr : []);
+    } catch {
+      return new Set();
+    }
+  });
+  const [showHiddenChefsPanel, setShowHiddenChefsPanel] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('hiddenChefIds', JSON.stringify(Array.from(hiddenChefIds)));
+    } catch {}
+  }, [hiddenChefIds]);
 
   // Charger les données
   useEffect(() => {
@@ -493,6 +512,27 @@ const UserManagement = () => {
     )
   );
 
+  // Appliquer le masquage
+  const visibleChefs = filteredChefs.filter(c => !hiddenChefIds.has(c.id));
+  const maskedChefs = chefs.filter(c => hiddenChefIds.has(c.id));
+
+  const handleHideChef = (chefId, e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    setHiddenChefIds(prev => {
+      const next = new Set(prev);
+      next.add(chefId);
+      return next;
+    });
+  };
+
+  const handleUnhideChef = (chefId) => {
+    setHiddenChefIds(prev => {
+      const next = new Set(prev);
+      next.delete(chefId);
+      return next;
+    });
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -513,6 +553,18 @@ const UserManagement = () => {
         </div>
         
         <div className="flex items-center space-x-3">
+          {(user?.role === 'administrateur' || user?.role === 'rh') && (
+            <button
+              onClick={() => setShowHiddenChefsPanel(v => !v)}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                showHiddenChefsPanel ? 'bg-gray-700 hover:bg-gray-800 text-white' : 'bg-gray-600 hover:bg-gray-700 text-white'
+              }`}
+              title="Afficher les chefs masqués"
+            >
+              <FiEyeOff className="h-4 w-4" />
+              <span>Chefs masqués{maskedChefs.length ? ` (${maskedChefs.length})` : ''}</span>
+            </button>
+          )}
           {(user?.role === 'administrateur' || user?.role === 'rh') && (
             <button
               onClick={() => setShowAssignSection(!showAssignSection)}
@@ -639,7 +691,7 @@ const UserManagement = () => {
                             className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           >
                             <option value="">Sélectionner un chef</option>
-                            {availableChefs.map(chef => (
+                            {availableChefs.filter(c => !hiddenChefIds.has(c.id)).map(chef => (
                               <option key={chef.id} value={chef.id}>
                                 {chef.name}
                               </option>
@@ -706,12 +758,44 @@ const UserManagement = () => {
         </div>
       </div>
 
+      {/* Panneau des chefs masqués */}
+      {showHiddenChefsPanel && (
+        <div className="card">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Chefs masqués ({maskedChefs.length})</h3>
+          </div>
+          {maskedChefs.length === 0 ? (
+            <div className="text-gray-500">Aucun chef masqué</div>
+          ) : (
+            <div className="space-y-2">
+              {maskedChefs.map((chef) => (
+                <div key={chef.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-gray-300 rounded-lg" />
+                    <div>
+                      <div className="font-medium text-gray-900">{chef.name}</div>
+                      <div className="text-sm text-gray-600">{chef.ateliers && chef.ateliers[0] ? chef.ateliers[0].nom : '—'}</div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleUnhideChef(chef.id)}
+                    className="px-3 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg"
+                  >
+                    Réactiver
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Vue hiérarchique Chefs -> Employés */}
       <div className="card">
         <h3 className="text-lg font-semibold text-gray-900 mb-6">Structure Organisationnelle</h3>
         
         <div className="space-y-4">
-          {filteredChefs.map((chef) => (
+          {visibleChefs.map((chef) => (
             <motion.div
               key={chef.id}
               initial={{ opacity: 0, y: 20 }}
@@ -742,7 +826,7 @@ const UserManagement = () => {
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2">
                     <div className="text-right">
                       <p className="text-sm font-medium text-gray-900">
                         {chef.employees.length} employé(s)
@@ -753,11 +837,18 @@ const UserManagement = () => {
                     </div>
                     
                     <div className="flex items-center space-x-2">
-                      <button className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors">
+                      <button onClick={(e) => { e.stopPropagation(); /* edit */ }} className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors">
                         <FiEdit className="h-4 w-4" />
                       </button>
-                      <button className="p-2 text-green-600 hover:bg-green-100 rounded-lg transition-colors">
+                      <button onClick={(e) => { e.stopPropagation(); /* view */ }} className="p-2 text-green-600 hover:bg-green-100 rounded-lg transition-colors">
                         <FiEye className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={(e) => handleHideChef(chef.id, e)}
+                        className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                        title="Masquer ce chef"
+                      >
+                        <FiEyeOff className="h-4 w-4" />
                       </button>
                     </div>
                   </div>
@@ -852,7 +943,7 @@ const UserManagement = () => {
           ))}
         </div>
 
-        {filteredChefs.length === 0 && (
+        {visibleChefs.length === 0 && (
           <div className="text-center py-12">
             <FiTool className="mx-auto h-12 w-12 text-gray-300 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun chef trouvé</h3>

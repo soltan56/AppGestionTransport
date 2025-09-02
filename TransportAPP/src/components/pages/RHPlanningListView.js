@@ -135,15 +135,15 @@ const RHPlanningListView = () => {
             const dayFlags = DAYS.map(day => {
               const arr = Array.isArray((dayAssignments?.[day] || {})[team]) ? (dayAssignments?.[day] || {})[team] : [];
               return arr.some(v => parseInt(v, 10) === idNum) ? '✔' : '';
-            });
+          });
             const displayTeam = team === 'Normal' ? 'Heure supp' : team;
-            csvData.push([
+          csvData.push([
               displayTeam,
-              `${employee.nom} ${employee.prenom}`.trim() || 'N/A',
-              employee.circuit_affecte || 'N/A',
-              employee.point_ramassage || 'N/A',
-              ...dayFlags
-            ]);
+            `${employee.nom} ${employee.prenom}`.trim() || 'N/A',
+            employee.circuit_affecte || 'N/A',
+            employee.point_ramassage || 'N/A',
+            ...dayFlags
+          ]);
           });
         });
       } else {
@@ -281,27 +281,27 @@ const RHPlanningListView = () => {
         const enrichedAssignments = {};
         Object.entries(assignmentsObj).forEach(([equipe, employeeIds]) => {
           if (!Array.isArray(employeeIds)) return;
-          employeeIds.forEach(employeeId => {
-            const idNum = parseInt(employeeId, 10);
-            const employee = users.find(u => u.id === idNum);
+            employeeIds.forEach(employeeId => {
+              const idNum = parseInt(employeeId, 10);
+              const employee = users.find(u => u.id === idNum);
             if (!employee) return;
             if (!enrichedAssignments[String(idNum)]) {
-              enrichedAssignments[String(idNum)] = {
-                id: idNum,
+                enrichedAssignments[String(idNum)] = {
+                  id: idNum,
                 equipes: [],
-                nom: employee.nom,
-                prenom: employee.prenom,
-                email: employee.email || 'N/A',
-                type_contrat: employee.type_contrat || 'N/A',
-                atelier: employee.atelier_name || employee.atelier || 'N/A',
-                chef_atelier: employee.chef_name || 'N/A',
-                circuit_affecte: employee.circuit_affecte || 'N/A',
-                point_ramassage: employee.point_ramassage || 'N/A'
-              };
-            }
+                  nom: employee.nom,
+                  prenom: employee.prenom,
+                  email: employee.email || 'N/A',
+                  type_contrat: employee.type_contrat || 'N/A',
+                  atelier: employee.atelier_name || employee.atelier || 'N/A',
+                  chef_atelier: employee.chef_name || 'N/A',
+                  circuit_affecte: employee.circuit_affecte || 'N/A',
+                  point_ramassage: employee.point_ramassage || 'N/A'
+                };
+              }
             if (!enrichedAssignments[String(idNum)].equipes.includes(equipe)) {
               enrichedAssignments[String(idNum)].equipes.push(equipe);
-            }
+          }
           });
         });
         
@@ -929,33 +929,33 @@ const RHPlanningListView = () => {
                               return arr.some(v => parseInt(v, 10) === parseInt(employee.id, 10));
                             });
                             if (!hasAny) return null;
-                            const dayChips = DAYS.map(day => {
+                          const dayChips = DAYS.map(day => {
                               const arr = Array.isArray((da?.[day] || {})[team]) ? (da?.[day] || {})[team] : [];
-                              const checked = arr.some(v => parseInt(v, 10) === parseInt(employee.id, 10));
-                              return (
-                                <span key={`${employee.id}-${team}-${day}`} className={`px-2 py-0.5 rounded border text-[10px] ${checked ? 'bg-blue-50 text-blue-700 border-blue-300' : 'bg-gray-50 text-gray-400 border-gray-200'}`}>{day}{checked ? ' ✔' : ''}</span>
-                              );
-                            });
-                            const displayTeam = team === 'Normal' ? 'Heure supp' : team;
+                            const checked = arr.some(v => parseInt(v, 10) === parseInt(employee.id, 10));
                             return (
-                              <div key={`${employee.id}-${team}`} className="px-3 py-2 text-xs hover:bg-gray-50 transition-colors">
-                                <div className="grid grid-cols-5 gap-3 items-start">
-                                  <span className="text-blue-700 font-semibold bg-blue-50 px-2 py-1 rounded border border-blue-200">
-                                    {displayTeam}
-                                  </span>
-                                  <span className="font-semibold text-purple-800 bg-purple-50 px-2 py-1 rounded border border-purple-200">
-                                    {employee.nom} {employee.prenom}
-                                  </span>
-                                  <span className="text-green-700 bg-green-50 px-2 py-1 rounded border border-green-200">
-                                    {employee.circuit_affecte}
-                                  </span>
-                                  <span className="text-orange-700 bg-orange-50 px-2 py-1 rounded border border-orange-200">
-                                    {employee.point_ramassage}
-                                  </span>
-                                  <span className="flex flex-wrap gap-1">{dayChips}</span>
-                                </div>
-                              </div>
+                                <span key={`${employee.id}-${team}-${day}`} className={`px-2 py-0.5 rounded border text-[10px] ${checked ? 'bg-blue-50 text-blue-700 border-blue-300' : 'bg-gray-50 text-gray-400 border-gray-200'}`}>{day}{checked ? ' ✔' : ''}</span>
                             );
+                          });
+                            const displayTeam = team === 'Normal' ? 'Heure supp' : team;
+                          return (
+                              <div key={`${employee.id}-${team}`} className="px-3 py-2 text-xs hover:bg-gray-50 transition-colors">
+                              <div className="grid grid-cols-5 gap-3 items-start">
+                                <span className="text-blue-700 font-semibold bg-blue-50 px-2 py-1 rounded border border-blue-200">
+                                    {displayTeam}
+                                </span>
+                                <span className="font-semibold text-purple-800 bg-purple-50 px-2 py-1 rounded border border-purple-200">
+                                  {employee.nom} {employee.prenom}
+                                </span>
+                                <span className="text-green-700 bg-green-50 px-2 py-1 rounded border border-green-200">
+                                  {employee.circuit_affecte}
+                                </span>
+                                <span className="text-orange-700 bg-orange-50 px-2 py-1 rounded border border-orange-200">
+                                  {employee.point_ramassage}
+                                </span>
+                                <span className="flex flex-wrap gap-1">{dayChips}</span>
+                              </div>
+                            </div>
+                          );
                           }).filter(Boolean);
                           return rows;
                         })}
