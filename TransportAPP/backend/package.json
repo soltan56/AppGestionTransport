@@ -2,10 +2,10 @@
   "name": "transport-admin-backend",
   "version": "1.0.0",
   "description": "Backend pour l'application de gestion de transport",
-  "main": "server.js",
+  "main": "simple_working_server_mysql.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon simple_working_server.js",
+    "start": "node simple_working_server_mysql.js",
+    "dev": "nodemon simple_working_server_mysql.js",
     "migrate": "node run-migrations.js",
     "migrate-safe": "node migrate-safe.js",
     "fix-users": "node fix-users-table.js",
@@ -48,6 +48,6 @@
     "api",
     "sqlite"
   ],
-  "author": "Votre Nom",
+  "author": "Youssef Digham",
   "license": "MIT"
 }
